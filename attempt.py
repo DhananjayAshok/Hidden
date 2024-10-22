@@ -7,6 +7,8 @@ name = "meta-llama/Llama-3.1-8B-Instruct"
 
 tokenizer = AutoTokenizer.from_pretrained(name)
 model = AutoModelForCausalLM.from_pretrained(name)
+model.config.pad_token_id = model.config.eos_token_id
+tokenizer.pad_token = tokenizer.eos_token
 
 prompt = "What was Einsteins first name? "
 
