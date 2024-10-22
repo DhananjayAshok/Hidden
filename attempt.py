@@ -13,6 +13,13 @@ tokenizer.pad_token = tokenizer.eos_token
 prompt = "What was Einsteins first name? "
 
 
+def set_tracking_config(model, track_layers=[2, 15, 30], track_mlp=True, track_attention=True):
+    model.config.track_layers = track_layers
+    model.track_mlp = track_mlp
+    model.track_attention = track_attention
+     
+     
+
 def detect_hidden_states_parameters(single_token_probe_hidden_output):
     assert isinstance(single_token_probe_hidden_output, dict)
     layers = list(single_token_probe_hidden_output.keys())
@@ -63,6 +70,7 @@ def read_hidden_states(probe_hidden_output):
     return ret
 
 
+set_tracking_config(model, track_layers=[2, 15, 30], track_mlp=True, track_attention=False)
 
 inputs = tokenizer(prompt, return_tensors="pt")
 output = model.generate(**inputs, max_new_tokens=10)
