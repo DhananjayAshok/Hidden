@@ -67,11 +67,10 @@ name = "meta-llama/Llama-3.1-8B-Instruct"
 tokenizer = AutoTokenizer.from_pretrained(name)
 tokenizer.pad_token = tokenizer.eos_token
 config = AutoConfig.from_pretrained(name)
-config.pad_token_id = config.eos_token_id
 set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=False)
 
 model = AutoModelForCausalLM.from_pretrained(name, config=config)
-
+model.config.pad_token_id = model.config.eos_token_id
 
 prompt = "What was Einsteins first name? "
 
