@@ -1,22 +1,14 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 import warnings
 import numpy as np
 import torch
 
-name = "meta-llama/Llama-3.1-8B-Instruct"
 
-tokenizer = AutoTokenizer.from_pretrained(name)
-model = AutoModelForCausalLM.from_pretrained(name)
-model.config.pad_token_id = model.config.eos_token_id
-tokenizer.pad_token = tokenizer.eos_token
-
-prompt = "What was Einsteins first name? "
-
-
-def set_tracking_config(model, track_layers=[2, 15, 30], track_mlp=True, track_attention=True):
-    model.config.track_layers = track_layers
-    model.track_mlp = track_mlp
-    model.track_attention = track_attention
+def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True):
+    config.track_layers = track_layers
+    config.track_mlp = track_mlp
+    config.track_attention = track_attention
+    return
      
      
 
@@ -70,7 +62,21 @@ def read_hidden_states(probe_hidden_output):
     return ret
 
 
-set_tracking_config(model, track_layers=[2, 15, 30], track_mlp=True, track_attention=False)
+name = "meta-llama/Llama-3.1-8B-Instruct"
+
+tokenizer = AutoTokenizer.from_pretrained(name)
+tokenizer.pad_token = tokenizer.eos_token
+config = AutoConfig.from_pretrained(name)
+config.pad_token_id = config.eos_token_id
+set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=False)
+
+model = AutoModelForCausalLM.from_pretrained(name, config=config)
+
+
+prompt = "What was Einsteins first name? "
+
+
+
 
 inputs = tokenizer(prompt, return_tensors="pt")
 output = model.generate(**inputs, max_new_tokens=10)
