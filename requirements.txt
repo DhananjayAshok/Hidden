@@ -1,0 +1,4 @@
+accelerate
+einops
+pandas
+numpy
