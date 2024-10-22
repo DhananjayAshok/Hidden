@@ -55,7 +55,7 @@ def read_hidden_states(probe_hidden_output):
          for layer in layers:
               for key in keys:
                    ret[layer][key].append(hidden_output[layer][key])
-    for layer in layer:
+    for layer in layers:
          for key in key:
               ret[layer][key] = torch.cat(ret[layer][key], dim=1)
     return ret
