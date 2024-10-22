@@ -60,21 +60,17 @@ def read_hidden_states(probe_hidden_output):
                    ret[f"layer_{layer}"][key].append(hidden_output[layer][key])
     for layer in layers:
          for key in keys:
-              ret[f"layer_{layer}"][key] = torch.cat(ret[f"layer_{layer}"][key], dim=1)
-    return ret
-
-def merge_batches(main_hidden_states, secondary_hidden_states):
-    assert main_hidden_states is not None and secondary_hidden_states is not None
-    for layer in main_hidden_states.keys():
-        for key in main_hidden_states[layer].keys():
-            main_hidden_states[layer][key] = torch.cat([main_hidden_states[layer][key], secondary_hidden_states[layer][key]], dim=0)
-    return main_hidden_states
-     
+              ret[f"layer_{layer}"][key] = torch.cat(ret[f"layer_{layer}"][key], dim=1)[0] # batch size is always 0
+    return ret     
 
 def to_numpy(hidden_states):
      for layer in hidden_states.keys():
           for key in hidden_states[layer].keys():
                hidden_states[layer][key] = hidden_states[layer][key].numpy()
+
+def to_numpy_list(hidden_states_list):
+    for i in range(len(hidden_states_list)):
+        to_numpy(hidden_states_list[i])
 
 
 name = "meta-llama/Llama-3.1-8B-Instruct"
@@ -89,24 +85,22 @@ model.config.pad_token_id = model.config.eos_token_id
 
 prompts = ["What was Einsteins first name? ", "What is the capital of Paris? "]
 inputs = tokenizer(prompts, return_tensors="pt").to(model.device)
-hidden_states = None
+hidden_states_list = []
 for i in tqdm(range(5)): 
     output = model.generate(**inputs, max_new_tokens=3)
-    if hidden_states is None: 
-        hidden_states = read_hidden_states(model.probe_hidden_output)
-    else:
-        hidden_states = merge_batches(hidden_states, read_hidden_states(model.probe_hidden_output))
+    hidden_states = read_hidden_states(model.probe_hidden_output)
+    hidden_states_list.append(hidden_states)
     model.probe_reset_hidden_output()
 
 data_pkl = "hidden_states_torch.pkl"
 with open(data_pkl, "wb") as f:
-    pickle.dump(hidden_states, f)
-to_numpy(hidden_states)
+    pickle.dump(hidden_states_list, f)
+to_numpy_list(hidden_states_list)
 data_np_pkl = "hidden_states_np.pkl"
 with open(data_np_pkl, "wb") as f:
-    pickle.dump(hidden_states, f)
+    pickle.dump(hidden_states_list, f)
 data_npz = "hidden_states.npz"
-np.savez(data_npz, **hidden_states)
+np.savez(data_npz, hidden_states_list)
 print("Saved to all formats")
 
 
