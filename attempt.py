@@ -37,8 +37,8 @@ def detect_hidden_states_parameters(single_token_probe_hidden_output):
 def read_hidden_states(probe_hidden_output):
     if not isinstance(probe_hidden_output, list):
          probe_hidden_output = [probe_hidden_output]
-    n_tokens_generated = len(model.probe_hidden_output)
-    if len(n_tokens_generated) == 0:
+    n_tokens_generated = len(probe_hidden_output)
+    if n_tokens_generated == 0:
         warnings.warn("No tokens generated yet or already reset")
         return None
 
