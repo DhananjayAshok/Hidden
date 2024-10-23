@@ -6,9 +6,9 @@ import os
 np.random.seed(42)
 
 data_dir = "data"
-if not os.path.exists(f"{data_dir}/base/"):
-    os.makedirs(f"{data_dir}/base/")
-
+for subdir in ["base", "unanswerable"]:
+    if not os.path.exists(f"{data_dir}/{subdir}/"):
+        os.makedirs(f"{data_dir}/{subdir}/")
 
 
 def process_squad():
@@ -36,7 +36,7 @@ def process_squad():
 def process_healthver():
     def get_healthver(path):
         df = pd.read_csv(path)
-        df["text"] = df["evidence"] + "\nClaim: " + df["claim"]
+        df["text"] = "Evidence: " + df["evidence"] + "\nClaim: " + df["claim"]
         df["unanswerable"] = df["label"] == "Neutral"
         return df[["evidence", "claim", "text", "label", "unanswerable"]]
 
@@ -92,9 +92,24 @@ def process_mmlu():
     valid.to_csv(f"{data_dir}/base/mmlu_test.csv", index=False)
     return train, valid
 
+
+def tmp_setuphealthver():
+    # will set up healthver for the NIE task
+    train = pd.read_csv("data/base/healthver_train.csv")
+    valid = pd.read_csv("data/base/healthver_test.csv")
+    def proc_df(df):
+        df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+        df["label"] = df["unanswerable"].astype(int)
+        return df[["text", "label"]]
+    train = proc_df(train)
+    valid = proc_df(valid)
+    train.to_csv("data/unanswerable/healthver_train.csv", index=False)
+    valid.to_csv("data/unanswerable/healthver_test.csv", index=False)
+
 if __name__ == "__main__":
-    process_squad()
-    process_healthver()
-    process_selfaware()
-    process_known_unkown()
-    process_mmlu()
+    #process_squad()
+    #process_healthver()
+    #process_selfaware()
+    #process_known_unkown()
+    #process_mmlu()
+    tmp_setuphealthver()
