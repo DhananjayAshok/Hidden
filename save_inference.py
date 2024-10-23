@@ -3,6 +3,7 @@ from compute_hidden import set_tracking_config, read_hidden_states, save_hidden_
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, AutoModelForSequenceClassification
 import pandas as pd
 from tqdm import tqdm
+import os
 
 
 @click.command()
@@ -38,6 +39,10 @@ def main(model_name, data_path, output_csv_path, output_hidden_path, max_new_tok
         if remove_stop_string:
             out = out.replace(stop_string, "")
         data_df.loc[i, "output"] = out
+    for output_path in [output_csv_path, output_hidden_path]:
+        if os.path.dirname(output_path) != "":
+            if not os.path.exists(os.path.dirname(output_path)):
+                os.makedirs(os.path.dirname(output_path))
     save_hidden_states(hidden_states_list, output_hidden_path)
     if "label" in data_df.columns:
         data_df[["output", "label"]].to_csv(output_csv_path, index=False)
