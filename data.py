@@ -91,3 +91,10 @@ def process_mmlu():
     train.to_csv(f"{data_dir}/base/mmlu_train.csv", index=False)
     valid.to_csv(f"{data_dir}/base/mmlu_test.csv", index=False)
     return train, valid
+
+if __name__ == "__main__":
+    process_squad()
+    process_healthver()
+    process_selfaware()
+    process_known_unkown()
+    process_mmlu()
