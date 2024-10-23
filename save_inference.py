@@ -49,3 +49,6 @@ def main(model_name, data_path, output_csv_path, output_hidden_path, max_new_tok
     else:
         data_df[["output"]].to_csv(output_csv_path, index=False)
     return 
+
+if __name__ == "__main__":
+    main()
