@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import pickle
+import h5py
 
 
 def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True):
@@ -60,7 +61,7 @@ def read_hidden_states(probe_hidden_output):
                    ret[f"layer_{layer}"][key].append(hidden_output[layer][key])
     for layer in layers:
          for key in keys:
-              ret[f"layer_{layer}"][key] = torch.cat(ret[f"layer_{layer}"][key], dim=1)[0] # batch size is always 0
+              ret[f"layer_{layer}"][key] = torch.cat(ret[f"layer_{layer}"][key], dim=1)[0].numpy() # batch size is always 0
     return ret     
 
 def to_numpy(hidden_states):
@@ -72,6 +73,13 @@ def to_numpy_list(hidden_states_list):
     for i in range(len(hidden_states_list)):
         to_numpy(hidden_states_list[i])
 
+def deepcopy(hidden_states):
+    ret = {}
+    for layer in hidden_states.keys():
+        ret[layer] = {}
+        for key in hidden_states[layer].keys():
+            ret[layer][key] = hidden_states[layer][key].copy()
+    return ret
 
 name = "meta-llama/Llama-3.1-8B-Instruct"
 
@@ -83,20 +91,25 @@ set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_atte
 model = AutoModelForCausalLM.from_pretrained(name, config=config)
 model.config.pad_token_id = model.config.eos_token_id
 
-prompts = ["What was Einsteins first name? ", "What is the capital of Paris? "]
-inputs = tokenizer(prompts, return_tensors="pt").to(model.device)
-hidden_states_list = []
+prompt = "What was Einsteins first name? "
+inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+output = model.generate(**inputs, max_new_tokens=3)
+hidden_states = read_hidden_states(model.probe_hidden_output)
+model.probe_reset_hidden_output()
+hidden_states_list = [hidden_states]
 for i in tqdm(range(5)): 
-    output = model.generate(**inputs, max_new_tokens=3)
-    hidden_states = read_hidden_states(model.probe_hidden_output)
+    hidden_states = deepcopy(hidden_states)
     hidden_states_list.append(hidden_states)
-    model.probe_reset_hidden_output()
 
-data_pkl = "hidden_states_torch.pkl"
-with open(data_pkl, "wb") as f:
-    pickle.dump(hidden_states_list, f)
-to_numpy_list(hidden_states_list)
-data_np_pkl = "hidden_states_np.pkl"
+with h5py.File('hidden_states.h5', 'w') as h5file:
+    for idx, data in enumerate(hidden_states_list):
+        group = h5file.create_group(f'item_{idx}')
+        for layer_idx, layer_data in data.items():
+            layer_grp = group.create_group(str(layer_idx))
+            for key, array in layer_data.items():
+                layer_grp.create_dataset(key, data=array)
+
+data_np_pkl = "hidden_states.pkl"
 with open(data_np_pkl, "wb") as f:
     pickle.dump(hidden_states_list, f)
 data_npz = "hidden_states.npz"
