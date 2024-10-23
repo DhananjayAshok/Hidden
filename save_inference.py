@@ -32,7 +32,7 @@ def main(model_name, data_path, output_csv_path, output_hidden_path, max_new_tok
         prompt = data_df.loc[i, "text"]
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         input_length = inputs["input_ids"].shape[1]
-        output = model.generate(**inputs, max_new_tokens=max_new_tokens, stop_strings=stop_strings, pad_token_id=tokenizer.eos_token_id)
+        output = model.generate(**inputs, max_new_tokens=max_new_tokens, stop_strings=stop_strings, pad_token_id=tokenizer.eos_token_id, tokenizer=tokenizer)
         hidden_states = read_hidden_states(model.probe_hidden_output)
         model.probe_reset_hidden_output()
         hidden_states_list.append(hidden_states)
