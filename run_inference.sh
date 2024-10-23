@@ -1,0 +1,2 @@
+python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_path data/unanswerable/healthver_train.csv --output_csv_path results/unanswerable/healthver_train_inference.csv --output_hidden_path results/unanswerable/healthver_train_hidden.csv --max_new_tokens 1
+#python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_path data/unanswerable/healthver_dev.csv --output_csv_path results/unanswerable/healthver_dev_inference.csv --output_hidden_path results/unanswerable/healthver_dev_hidden.pkl --max_new_tokens 1
