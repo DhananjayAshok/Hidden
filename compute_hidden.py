@@ -8,7 +8,7 @@ def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_
     config.track_mlp = track_mlp
     config.track_attention = track_attention
     for element in track_layers:
-         assert track_layers < config.num_hidden_layers
+         assert element < config.num_hidden_layers
     return
      
      
