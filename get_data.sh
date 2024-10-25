@@ -5,6 +5,16 @@ gdown https://drive.google.com/file/d/1BJv5Uqy1QnX_tcZ4jkn5QAtI2XIhec_z/view?usp
 gdown https://drive.google.com/file/d/1Lmgqn_YZBGKeSDloBzxhH0NnpGk2WRyH/view?usp=sharing --fuzzy
 cd ..
 mkdir healthver
+cd healthver
 wget https://raw.githubusercontent.com/sarrouti/HealthVer/refs/heads/master/data/healthver_train.csv
 wget https://raw.githubusercontent.com/sarrouti/HealthVer/refs/heads/master/data/healthver_dev.csv
 wget https://raw.githubusercontent.com/sarrouti/HealthVer/refs/heads/master/data/healthver_test.csv
+cd ..
+mkdir qnota
+cd qnota
+wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/incomplete_questions.json
+wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/futuristic_questions.json
+wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/ambiguous_questions.json
+wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/unmeasurable_questions.json
+wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/incorrect_questions.json
+
