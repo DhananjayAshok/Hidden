@@ -10,16 +10,24 @@ import os
 @click.option("--model_name", type=str, required=True)
 @click.option("--data_path", type=str, required=True)
 @click.option("--output_csv_path", type=str, required=True)
-@click.option("--output_hidden_path", type=str, required=True)
+@click.option("--output_hidden_dir", type=str, required=True)
+@click.option("--save_every", type=int, default=500)
 @click.option("--max_new_tokens", type=int, default=10)
 @click.option("--stop_strings", type=str, default="[STOP]")
 @click.option("--remove_stop_strings", type=bool, default=True)
 @click.option("--track_layers", type=str, default="2,15,30")
 @click.option("--track_mlp", type=bool, default=True)
 @click.option("--track_attention", type=bool, default=True)
-def main(model_name, data_path, output_csv_path, output_hidden_path, max_new_tokens, stop_strings, remove_stop_strings, track_layers, track_mlp, track_attention):
+def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, max_new_tokens, stop_strings, remove_stop_strings, track_layers, track_mlp, track_attention):
     track_layers = [int(x) for x in track_layers.split(",")]
     stop_strings = stop_strings.split(",")
+    makedirs = [output_hidden_dir]
+    for output_path in [output_csv_path]:
+        if os.path.dirname(output_path) != "":
+            makedirs.append(os.path.dirname(output_path))
+    for directory in makedirs:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
     config = AutoConfig.from_pretrained(model_name)
@@ -42,11 +50,9 @@ def main(model_name, data_path, output_csv_path, output_hidden_path, max_new_tok
             for stop_string in stop_strings:
                 out = out.replace(stop_string, "")
         data_df.loc[i, "output"] = out
-    for output_path in [output_csv_path, output_hidden_path]:
-        if os.path.dirname(output_path) != "":
-            if not os.path.exists(os.path.dirname(output_path)):
-                os.makedirs(os.path.dirname(output_path))
-    save_hidden_states(hidden_states_list, output_hidden_path)
+        if i % save_every == 0 or i == len(data_df) - 1:
+            save_hidden_states(hidden_states_list, output_hidden_dir+f"/{i}.pkl")
+            hidden_states_list = []
     if "label" in data_df.columns:
         data_df[["output", "label"]].to_csv(output_csv_path, index=False)
     else:
