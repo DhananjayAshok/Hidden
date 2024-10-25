@@ -92,13 +92,45 @@ def process_mmlu():
     valid.to_csv(f"{data_dir}/base/mmlu_test.csv", index=False)
     return train, valid
 
+def process_qnota():
+    # ambiguous, futuristic, unmeasurable, incorrect
+    columns = ["incomplete_questions", "ambiguous_questions", "futuristic_questions", "unmeasurable_questions", "incorrect_questions"]
+    pass
+
+
+def tmp_setupqnota():
+    files = ["incomplete_questions", "futuristic_questions", "unmeasurable_questions"]
+    columns = ["id", "group_id", "type", "text", "unanswerable"]
+    data = []
+    id_it = 0
+    group_it = 0
+    for file in files:
+        df = pd.read_csv(f"data/raw/qnota/{file}.csv")
+        for i, row in df.iterrows():
+            unanswerable = row[file]['u']
+            answerable = row[file]['a']
+            data.append([id_it, group_it, file, answerable, False])
+            id_it += 1
+            data.append([id_it, group_it, file, unanswerable, True])
+            id_it += 1
+            group_it += 1
+    df = pd.DataFrame(data, columns=columns)
+    train = df.sample(frac=0.8)
+    valid = df.drop(train.index).reset_index(drop=True)
+    train = train.reset_index(drop=True)
+    # save to data/unanswerable/qnota_train.csv
+    train.to_csv(f"{data_dir}/unanswerable/qnota_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/unanswerable/qnota_test.csv", index=False)
+
+
+
 def tmp_setupsquad():
     train = pd.read_csv(f"{data_dir}/base/squad_train.csv")
     valid = pd.read_csv(f"{data_dir}/base/squad_test.csv")
     def proc_df(df):
         df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
         df["label"] = df["unanswerable"].astype(int)
-        return df[["text", "label"]]
+        return df[["id", "text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
     train.to_csv(f"{data_dir}/unanswerable/squad_train.csv", index=False)
@@ -111,7 +143,7 @@ def tmp_setupselfaware():
     def proc_df(df):
         df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
         df["label"] = df["unanswerable"].astype(int)
-        return df[["text", "label"]]
+        return df[["id", "text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
     train.to_csv(f"{data_dir}/unanswerable/selfaware_train.csv", index=False)
@@ -125,7 +157,7 @@ def tmp_setuphealthver():
     def proc_df(df):
         df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
         df["label"] = df["unanswerable"].astype(int)
-        return df[["text", "label"]]
+        return df[["id", "text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
     train.to_csv("data/unanswerable/healthver_train.csv", index=False)
