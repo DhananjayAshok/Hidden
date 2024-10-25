@@ -21,7 +21,7 @@ def process_squad():
         else:
             return x[0]
     def proc_df(df):
-        df["text"] = df["context"] + "\nQuestion: " + df["question"]
+        df["text"] = "Context: " + df["context"] + "\nQuestion: " + df["question"]
         df["answer"] = df["answers"].apply(lambda x: answer_na(x["text"]))
         df["unanswerable"] = df["answer"].isna()
         return df[["context", "question", "text", "answer", "unanswerable"]]
@@ -92,6 +92,31 @@ def process_mmlu():
     valid.to_csv(f"{data_dir}/base/mmlu_test.csv", index=False)
     return train, valid
 
+def tmp_setupsquad():
+    train = pd.read_csv(f"{data_dir}/base/squad_train.csv")
+    valid = pd.read_csv(f"{data_dir}/base/squad_test.csv")
+    def proc_df(df):
+        df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+        df["label"] = df["unanswerable"].astype(int)
+        return df[["text", "label"]]
+    train = proc_df(train)
+    valid = proc_df(valid)
+    train.to_csv(f"{data_dir}/unanswerable/squad_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/unanswerable/squad_test.csv", index=False)
+
+
+def tmp_setupselfaware():
+    train = pd.read_csv(f"{data_dir}/base/selfaware_train.csv")
+    valid = pd.read_csv(f"{data_dir}/base/selfaware_test.csv")
+    def proc_df(df):
+        df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+        df["label"] = df["unanswerable"].astype(int)
+        return df[["text", "label"]]
+    train = proc_df(train)
+    valid = proc_df(valid)
+    train.to_csv(f"{data_dir}/unanswerable/selfaware_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/unanswerable/selfaware_test.csv", index=False)
+
 
 def tmp_setuphealthver():
     # will set up healthver for the NIE task
@@ -112,4 +137,6 @@ if __name__ == "__main__":
     #process_selfaware()
     #process_known_unkown()
     #process_mmlu()
-    tmp_setuphealthver()
+    #tmp_setuphealthver()
+    tmp_setupsquad()
+    tmp_setupselfaware()
