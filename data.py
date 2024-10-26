@@ -86,8 +86,12 @@ def process_mmlu():
     ds = load_dataset("cais/mmlu", "all", split=["test", "validation"])
     train = ds[1].to_pandas()
     valid = ds[0].to_pandas()
-    train["idx"] = train.index
-    valid["idx"] = valid.index
+    def proc_df(df):
+        df["idx"] = df.index
+        df["choices"]  = df["choices"].apply(lambda x: x.tolist())
+        return df
+    train = proc_df(train)
+    valid = proc_df(valid)
     train.to_csv(f"{data_dir}/base/mmlu_train.csv", index=False)
     valid.to_csv(f"{data_dir}/base/mmlu_test.csv", index=False)
     return train, valid
@@ -137,6 +141,7 @@ def tmp_setupmmlu(k=2):
     valid = pd.read_csv(f"{data_dir}/base/mmlu_test.csv")
     system_prompt = "Answer the following MCQ by providing the correct option"
     def proc_df(df):
+        df["choices"] = df["choices"].apply(eval)
         for i in range(len(df)):
             subject = df.loc[i, "subject"]
             train_subjects = train[(train["subject"] == subject) & (train["idx"] != df.loc[i, "idx"])].reset_index(drop=True)
