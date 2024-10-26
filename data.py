@@ -213,3 +213,4 @@ if __name__ == "__main__":
     tmp_setupsquad()
     tmp_setupselfaware()
     tmp_setupmmlu()
+    tmp_setupqnota()
