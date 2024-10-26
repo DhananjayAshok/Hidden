@@ -99,7 +99,7 @@ def process_mmlu():
 def process_qnota():
     # ambiguous, futuristic, unmeasurable, incorrect
     columns = ["incomplete_questions", "ambiguous_questions", "futuristic_questions", "unmeasurable_questions", "incorrect_questions"]
-    pass
+
 
 
 def tmp_setupqnota():
@@ -110,6 +110,8 @@ def tmp_setupqnota():
     group_it = 0
     for file in files:
         df = pd.read_json(f"data/raw/qnota/{file}.json")
+        if file == "unmeasurable_questions":
+            df[file] = df["non_quantifiable_questions"] 
         for i, row in df.iterrows():
             unanswerable = row[file]['u']
             answerable = row[file]['a']
