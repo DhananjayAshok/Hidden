@@ -180,6 +180,9 @@ def tmp_setupselfaware():
     def proc_df(df):
         df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
         df["label"] = df["unanswerable"].astype(int)
+        wouldyous = df['text'].apply(lambda x: "would you rather" in x.lower())
+        df = df[~wouldyous]
+        df = df.reset_index(drop=True)
         return df[["idx", "text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
