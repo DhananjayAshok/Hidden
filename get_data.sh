@@ -1,7 +1,7 @@
 mkdir data
 cd data
 mkdir raw
-cd data/raw
+cd raw
 mkdir known_unknown
 cd known_unknown
 gdown https://drive.google.com/file/d/1BJv5Uqy1QnX_tcZ4jkn5QAtI2XIhec_z/view?usp=sharing --fuzzy
