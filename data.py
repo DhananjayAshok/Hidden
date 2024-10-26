@@ -6,7 +6,7 @@ import os
 np.random.seed(42)
 
 data_dir = "data"
-for subdir in ["base", "unanswerable"]:
+for subdir in ["base", "unanswerable", "confidence"]:
     if not os.path.exists(f"{data_dir}/{subdir}/"):
         os.makedirs(f"{data_dir}/{subdir}/")
 
