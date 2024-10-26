@@ -194,11 +194,12 @@ def tmp_setuphealthver():
     valid.to_csv("data/unanswerable/healthver_test.csv", index=False)
 
 if __name__ == "__main__":
-    #process_squad()
-    #process_healthver()
-    #process_selfaware()
-    #process_known_unkown()
-    #process_mmlu()
-    #tmp_setuphealthver()
+    process_squad()
+    process_healthver()
+    process_selfaware()
+    process_known_unkown()
+    process_mmlu()
+    tmp_setuphealthver()
     tmp_setupsquad()
     tmp_setupselfaware()
+    tmp_setupmmlu()

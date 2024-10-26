@@ -50,13 +50,13 @@ def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, 
             for stop_string in stop_strings:
                 out = out.replace(stop_string, "")
         data_df.loc[i, "output"] = out
-        if i % save_every == 0 or i == len(data_df) - 1:
+        if (i % save_every == 0 and i > 0) or i == len(data_df) - 1:
             save_hidden_states(hidden_states_list, output_hidden_dir+f"/{i}.pkl")
             hidden_states_list = []
-    if "label" in data_df.columns:
-        data_df[["output", "label"]].to_csv(output_csv_path, index=False)
-    else:
-        data_df[["output"]].to_csv(output_csv_path, index=False)
+            if "label" in data_df.columns:
+                data_df[["output", "label"]].to_csv(output_csv_path, index=False)
+            else:
+                data_df[["output"]].to_csv(output_csv_path, index=False)
     return 
 
 if __name__ == "__main__":
