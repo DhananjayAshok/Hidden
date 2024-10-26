@@ -100,7 +100,7 @@ def process_qnota():
 
 def tmp_setupqnota():
     files = ["incomplete_questions", "futuristic_questions", "unmeasurable_questions"]
-    columns = ["id", "group_id", "type", "text", "unanswerable"]
+    columns = ["idx", "group_idx", "type", "text", "unanswerable"]
     data = []
     id_it = 0
     group_it = 0
@@ -123,6 +123,36 @@ def tmp_setupqnota():
     valid.to_csv(f"{data_dir}/unanswerable/qnota_test.csv", index=False)
 
 
+def mmlu_choices_to_text(choices):
+    text = ""
+    options = ["A", "B", "C", "D"]
+    #options = [0, 1, 2, 3]
+    for i, choice in enumerate(choices):
+        text += f"\nOption {options[i]}: {choice}"
+    return text
+
+
+def tmp_setupmmlu(k=2):
+    train = pd.read_csv(f"{data_dir}/base/mmlu_train.csv")
+    valid = pd.read_csv(f"{data_dir}/base/mmlu_test.csv")
+    system_prompt = "Answer the following MCQ by providing the correct option"
+    def proc_df(df):
+        for i in range(len(df)):
+            subject = df.loc[i, "subject"]
+            train_subjects = train[(train["subject"] == subject) & (train["idx"] != df.loc[i, "idx"])].reset_index(drop=True)
+            train_subjects = train_subjects.sample(k).reset_index(drop=True)
+            prompt = ""
+            for j in range(k):
+                prompt += f"\nQuestion{train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {train_subjects.loc[j, 'answer']} [STOP]"
+            df.loc[i, "text"] = f"{system_prompt}\n{prompt}\nQuestion: {df.loc[i, 'question']}{mmlu_choices_to_text(df.loc[i, 'choices'])}\nAnswer: "
+            df.loc[i, "label"] = df.loc[i, "answer"]
+        return df[["idx", "text", "label"]]
+    train = proc_df(train)
+    valid = proc_df(valid)
+    train.to_csv(f"{data_dir}/confidence/train.csv", index=False)
+    valid.to_csv(f"{data_dir}/confidence/test.csv", index=False)
+    return 
+
 
 def tmp_setupsquad():
     train = pd.read_csv(f"{data_dir}/base/squad_train.csv")
@@ -130,7 +160,7 @@ def tmp_setupsquad():
     def proc_df(df):
         df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
         df["label"] = df["unanswerable"].astype(int)
-        return df[["id", "text", "label"]]
+        return df[["idx", "text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
     train.to_csv(f"{data_dir}/unanswerable/squad_train.csv", index=False)
@@ -143,7 +173,7 @@ def tmp_setupselfaware():
     def proc_df(df):
         df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
         df["label"] = df["unanswerable"].astype(int)
-        return df[["id", "text", "label"]]
+        return df[["idx", "text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
     train.to_csv(f"{data_dir}/unanswerable/selfaware_train.csv", index=False)
@@ -157,7 +187,7 @@ def tmp_setuphealthver():
     def proc_df(df):
         df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
         df["label"] = df["unanswerable"].astype(int)
-        return df[["id", "text", "label"]]
+        return df[["idx", "text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
     train.to_csv("data/unanswerable/healthver_train.csv", index=False)

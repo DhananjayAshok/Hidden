@@ -6,3 +6,6 @@ python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_pa
 
 python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_path data/unanswerable/squad_train.csv --output_csv_path results/unanswerable/squad_train_inference.csv --output_hidden_dir results/unanswerable/train/squad --max_new_tokens 1
 python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_path data/unanswerable/squad_test.csv --output_csv_path results/unanswerable/squad_test_inference.csv --output_hidden_dir results/unanswerable/test/squad --max_new_tokens 1
+
+python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_path data/unanswerable/qnota_train.csv --output_csv_path results/unanswerable/qnota_train_inference.csv --output_hidden_dir results/unanswerable/train/qnota --max_new_tokens 1
+python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_path data/unanswerable/qnota_test.csv --output_csv_path results/unanswerable/qnota_test_inference.csv --output_hidden_dir results/unanswerable/test/qnota --max_new_tokens 1 
