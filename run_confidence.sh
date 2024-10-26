@@ -1,2 +1,0 @@
-python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_path data/confidence/mmlu_train.csv --output_csv_path results/confidence/mmlu_train_inference.csv --output_hidden_dir results/confidence/train/mmlu --max_new_tokens 5
-python save_inference.py --model_name meta-llama/Llama-3.1-8B-Instruct --data_path data/confidence/mmlu_test.csv --output_csv_path results/confidence/mmlu_test_inference.csv --output_hidden_dir results/confidence/test/mmlu --max_new_tokens 5

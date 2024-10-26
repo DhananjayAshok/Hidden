@@ -5,7 +5,7 @@ import os
 
 np.random.seed(42)
 
-data_dir = "data"
+data_dir = os.environ["DATA_DIR"]
 for subdir in ["base", "unanswerable", "confidence"]:
     if not os.path.exists(f"{data_dir}/{subdir}/"):
         os.makedirs(f"{data_dir}/{subdir}/")
@@ -40,9 +40,9 @@ def process_healthver():
         df["unanswerable"] = df["label"] == "Neutral"
         return df[["evidence", "claim", "text", "label", "unanswerable"]]
 
-    train = get_healthver("data/raw/healthver/healthver_train.csv")
-    valid = get_healthver("data/raw/healthver/healthver_dev.csv")
-    test = get_healthver("data/raw/healthver/healthver_test.csv")
+    train = get_healthver(f"{data_dir}/raw/healthver/healthver_train.csv")
+    valid = get_healthver(f"{data_dir}/raw/healthver/healthver_dev.csv")
+    test = get_healthver(f"{data_dir}/raw/healthver/healthver_test.csv")
     train = pd.concat([train, valid], ignore_index=True)
     train["idx"] = train.index
     test["idx"] = test.index
@@ -75,8 +75,8 @@ def process_known_unkown():
         df["id"] = df.index
         df = df[["id", "question", "answer", "unanswerable", "text"]]
         return df
-    train = get("data/raw/known_unknown/train.jsonl")
-    valid = get("data/raw/known_unknown/dev.jsonl")
+    train = get(f"{data_dir}/raw/known_unknown/train.jsonl")
+    valid = get(f"{data_dir}/raw/known_unknown/dev.jsonl")
     train.to_csv(f"{data_dir}/base/known_unknown_train.csv", index=False)
     valid.to_csv(f"{data_dir}/base/known_unknown_test.csv", index=False)
     return train, valid
@@ -109,7 +109,7 @@ def tmp_setupqnota():
     id_it = 0
     group_it = 0
     for file in files:
-        df = pd.read_json(f"data/raw/qnota/{file}.json")
+        df = pd.read_json(f"{data_dir}/raw/qnota/{file}.json")
         if file == "unmeasurable_questions":
             df[file] = df["non_quantifiable_questions"] 
         for i, row in df.iterrows():
@@ -194,16 +194,16 @@ def tmp_setupselfaware():
 
 def tmp_setuphealthver():
     # will set up healthver for the NIE task
-    train = pd.read_csv("data/base/healthver_train.csv")
-    valid = pd.read_csv("data/base/healthver_test.csv")
+    train = pd.read_csv(f"{data_dir}/base/healthver_train.csv")
+    valid = pd.read_csv(f"{data_dir}/base/healthver_test.csv")
     def proc_df(df):
         df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
         df["label"] = df["unanswerable"].astype(int)
         return df[["idx", "text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
-    train.to_csv("data/unanswerable/healthver_train.csv", index=False)
-    valid.to_csv("data/unanswerable/healthver_test.csv", index=False)
+    train.to_csv(f"{data_dir}/unanswerable/healthver_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/unanswerable/healthver_test.csv", index=False)
 
 if __name__ == "__main__":
     process_squad()
