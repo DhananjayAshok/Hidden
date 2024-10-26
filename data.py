@@ -109,7 +109,7 @@ def tmp_setupqnota():
     id_it = 0
     group_it = 0
     for file in files:
-        df = pd.read_csv(f"data/raw/qnota/{file}.csv")
+        df = pd.read_json(f"data/raw/qnota/{file}.json")
         for i, row in df.iterrows():
             unanswerable = row[file]['u']
             answerable = row[file]['a']
