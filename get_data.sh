@@ -1,3 +1,6 @@
+mkdir data
+cd data
+mkdir raw
 cd data/raw
 mkdir known_unknown
 cd known_unknown
