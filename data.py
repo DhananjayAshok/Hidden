@@ -152,7 +152,7 @@ def tmp_setupmmlu(k=2):
             for j in range(k):
                 prompt += f"\nQuestion: {train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {train_subjects.loc[j, 'answer']} [STOP]"
             df.loc[i, "text"] = f"{system_prompt}\n{prompt}\nQuestion: {df.loc[i, 'question']}{mmlu_choices_to_text(df.loc[i, 'choices'])}\nAnswer: "
-            df.loc[i, "label"] = df.loc[i, "answer"].apply(mmlu_answer_to_letter)
+            df.loc[i, "label"] = mmlu_answer_to_letter(df.loc[i, "answer"])
         return df[["idx", "text", "label"]]
     train_df = proc_df(train)
     valid = proc_df(valid)
