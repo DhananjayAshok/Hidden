@@ -156,8 +156,8 @@ def tmp_setupmmlu(k=2):
         return df[["idx", "text", "label"]]
     train_df = proc_df(train)
     valid = proc_df(valid)
-    train_df.to_csv(f"{data_dir}/confidence/train.csv", index=False)
-    valid.to_csv(f"{data_dir}/confidence/test.csv", index=False)
+    train_df.to_csv(f"{data_dir}/confidence/mmlu_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/confidence/mmlu_test.csv", index=False)
     return 
 
 
