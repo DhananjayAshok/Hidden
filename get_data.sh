@@ -1,3 +1,5 @@
+source proj_params.sh
+cd $PROJECT_STORE_DIR
 mkdir data
 cd data
 mkdir raw
