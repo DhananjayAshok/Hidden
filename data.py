@@ -135,6 +135,8 @@ def mmlu_choices_to_text(choices):
         text += f"\nOption {options[i]}: {choice}"
     return text
 
+def mmlu_answer_to_letter(answer):
+    return ["A", "B", "C", "D"][answer]
 
 def tmp_setupmmlu(k=2):
     train = pd.read_csv(f"{data_dir}/base/mmlu_train.csv")
@@ -148,13 +150,13 @@ def tmp_setupmmlu(k=2):
             train_subjects = train_subjects.sample(k).reset_index(drop=True)
             prompt = ""
             for j in range(k):
-                prompt += f"\nQuestion{train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {train_subjects.loc[j, 'answer']} [STOP]"
+                prompt += f"\nQuestion: {train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {train_subjects.loc[j, 'answer']} [STOP]"
             df.loc[i, "text"] = f"{system_prompt}\n{prompt}\nQuestion: {df.loc[i, 'question']}{mmlu_choices_to_text(df.loc[i, 'choices'])}\nAnswer: "
-            df.loc[i, "label"] = df.loc[i, "answer"]
+            df.loc[i, "label"] = df.loc[i, "answer"].apply(mmlu_answer_to_letter)
         return df[["idx", "text", "label"]]
-    train = proc_df(train)
+    train_df = proc_df(train)
     valid = proc_df(valid)
-    train.to_csv(f"{data_dir}/confidence/train.csv", index=False)
+    train_df.to_csv(f"{data_dir}/confidence/train.csv", index=False)
     valid.to_csv(f"{data_dir}/confidence/test.csv", index=False)
     return 
 
