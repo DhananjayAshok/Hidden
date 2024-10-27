@@ -152,7 +152,7 @@ def tmp_setupmmlu(k=2):
             train_subjects = train_subjects.sample(k).reset_index(drop=True)
             prompt = ""
             for j in range(k):
-                prompt += f"\nQuestion: {train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {train_subjects.loc[j, 'answer']} [STOP]"
+                prompt += f"\nQuestion: {train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {mmlu_answer_to_letter(train_subjects.loc[j, 'answer'])} [STOP]"
             df.loc[i, "text"] = f"{system_prompt}\n{prompt}\nQuestion: {df.loc[i, 'question']}{mmlu_choices_to_text(df.loc[i, 'choices'])}\nAnswer: "
             df.loc[i, "label"] = mmlu_answer_to_letter(df.loc[i, "answer"])
         return df[["idx", "text", "label"]]
