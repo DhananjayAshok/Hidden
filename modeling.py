@@ -44,10 +44,25 @@ train_files = sorted(train_files)
 test_files = sorted(test_files)
 X_train = get_array(train_files, f"{hidden_states_dir}/train/{dataset}/")
 X_test = get_array(test_files, f"{hidden_states_dir}/test/{dataset}/")
-train_df = pd.read_csv(f"{data_dir}/{task}/{dataset}_train.csv")
-test_df = pd.read_csv(f"{data_dir}/{task}/{dataset}_test.csv")
-y_train = train_df["unanswerable"].values
-y_test = test_df["unanswerable"].values
+
+if task == "unanswerable":
+    train_df = pd.read_csv(f"{data_dir}/{task}/{dataset}_train.csv")
+    test_df = pd.read_csv(f"{data_dir}/{task}/{dataset}_test.csv")
+    y_train = train_df["unanswerable"].values
+    y_test = test_df["unanswerable"].values
+elif task == "confidence":
+    train_df = pd.read_csv(f"{results_dir}/confidence/{dataset}_train_inference.csv")
+    test_df = pd.read_csv(f"{results_dir}/confidence/{dataset}_test_inference.csv")
+    y_train = train_df["correct"].values
+    y_test = test_df["correct"].values
+    nans = train_df["output_parsed"].isna()
+    train_df = train_df[~nans]
+    y_train = y_train[~nans]
+    X_train = X_train[~nans]
+    nans = test_df["output_parsed"].isna()
+    test_df = test_df[~nans]
+    y_test = y_test[~nans]
+    X_test = X_test[~nans]    
 
 clf = LogisticRegression(random_state=0).fit(X_train, y_train)
 train_score = clf.score(X_train, y_train)

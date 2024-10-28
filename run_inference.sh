@@ -15,7 +15,7 @@ do
         data_path="$DATA_DIR/$task/${dataset}_$split.csv"
         output_csv_path="$RESULTS_DIR/$task/${dataset}_${split}_inference.csv"
         output_hidden_dir="$RESULTS_DIR/$task/$split/${dataset}"
-        max_new_tokens=${max_new_token_dict[$dataset]}
+        max_new_tokens=${max_new_token_dict[$task]}
         python save_inference.py --model_name $model_name --data_path $data_path --output_csv_path $output_csv_path --output_hidden_dir $output_hidden_dir --max_new_tokens $max_new_tokens
     done
 done
