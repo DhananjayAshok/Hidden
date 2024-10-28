@@ -12,13 +12,14 @@ import os
 @click.option("--output_csv_path", type=str, required=True)
 @click.option("--output_hidden_dir", type=str, required=True)
 @click.option("--save_every", type=int, default=500)
+@click.option("--start_idx", type=int, default=0)
 @click.option("--max_new_tokens", type=int, default=10)
 @click.option("--stop_strings", type=str, default="[STOP]")
 @click.option("--remove_stop_strings", type=bool, default=True)
 @click.option("--track_layers", type=str, default="2,15,30")
 @click.option("--track_mlp", type=bool, default=True)
 @click.option("--track_attention", type=bool, default=True)
-def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, max_new_tokens, stop_strings, remove_stop_strings, track_layers, track_mlp, track_attention):
+def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, start_idx, max_new_tokens, stop_strings, remove_stop_strings, track_layers, track_mlp, track_attention):
     track_layers = [int(x) for x in track_layers.split(",")]
     stop_strings = stop_strings.split(",")
     makedirs = [output_hidden_dir]
@@ -36,7 +37,7 @@ def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, 
     assert "text" in data_df.columns
     model = AutoModelForCausalLM.from_pretrained(model_name, config=config, device_map="auto")
     hidden_states_list = []
-    for i in tqdm(range(len(data_df))):
+    for i in tqdm(range(start_idx, len(data_df))):
         prompt = data_df.loc[i, "text"]
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         input_length = inputs["input_ids"].shape[1]
