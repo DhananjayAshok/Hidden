@@ -91,17 +91,17 @@ def load_hidden_states(filename):
         return pickle.load(f)
     
 
-def alt_save_hidden_states(obj, folder, start_idx, exists_ok=False):
+def alt_save_hidden_states(obj, folder, end_idx, exists_ok=False):
     os.makedirs(folder, exist_ok=exists_ok)
     for i in range(len(obj)):
-        os.makedirs(f"{folder}/{start_idx + i}", exist_ok=exists_ok)
+        os.makedirs(f"{folder}/{end_idx - i}", exist_ok=exists_ok)
         layer_keys = list(obj[i].keys())
         for layer_key in layer_keys:
-            os.makedirs(f"{folder}/{start_idx + i}/{layer_key}", exist_ok=exists_ok)
+            os.makedirs(f"{folder}/{end_idx - i}/{layer_key}", exist_ok=exists_ok)
             hidden_keys = list(obj[i][layer_key].keys())
             for hidden_key in hidden_keys:
                 item = obj[i][layer_key][hidden_key]
-                filepath = f"{folder}/{start_idx + i}/{layer_key}/{hidden_key}.npy"
+                filepath = f"{folder}/{end_idx - i}/{layer_key}/{hidden_key}.npy"
                 np.save(filepath, item)
     return
 
@@ -112,8 +112,14 @@ def null_state_processor(x):
 
 def numpy_state_processor(x):
     array = []
-    for layer_key in x.keys():
-        for hidden_key in x[layer_key].keys():
+    layers = list(x.keys())
+    layer_numbers = [int(layer.split("_")[1]) for layer in layers]
+    layer_argsort = np.argsort(layer_numbers)
+    layers = [layers[i] for i in layer_argsort]
+    for layer_key in layers:
+        hidden_keys = list(x[layer_key].keys())
+        hidden_keys = sorted(hidden_keys)
+        for hidden_key in hidden_keys:
             array.extend(x[layer_key][hidden_key][-1])
     return np.array(array)
 
