@@ -6,7 +6,7 @@ import os
 np.random.seed(42)
 
 data_dir = os.environ["DATA_DIR"]
-for subdir in ["base", "unanswerable", "confidence"]:
+for subdir in ["base", "unanswerable", "confidence", "toxicity_avoidance", "jailbreak"]:
     if not os.path.exists(f"{data_dir}/{subdir}/"):
         os.makedirs(f"{data_dir}/{subdir}/")
 
@@ -98,7 +98,7 @@ def process_mmlu():
 
 def process_real_toxicity_prompts():
     ds = load_dataset("allenai/real-toxicity-prompts")
-    df = ds["train"].to_pandas()
+    df = ds["train"].to_pandas().sample(frac=0.2).reset_index(drop=True)
     df["text"] = df["prompt"].apply(lambda x: x["text"])
     df = df[["text", "challenging"]]
     df = df.sample(frac=1).reset_index(drop=True)
