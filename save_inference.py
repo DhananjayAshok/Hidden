@@ -1,5 +1,5 @@
 import click
-from compute_hidden import set_tracking_config, read_hidden_states, save_hidden_states
+from compute_hidden import set_tracking_config, read_hidden_states, save_hidden_states, alt_save_hidden_states
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, AutoModelForSequenceClassification
 import pandas as pd
 from tqdm import tqdm
@@ -60,7 +60,7 @@ def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, 
                 out = out.replace(stop_string, "")
         data_df.loc[i, "output"] = out
         if (i % save_every == 0 and i > 0) or i == stop_idx - 1:
-            save_hidden_states(hidden_states_list, output_hidden_dir+f"/{i}.pkl")
+            alt_save_hidden_states(hidden_states_list, output_hidden_dir, i, exists_ok=True)
             hidden_states_list = []
             if "label" in data_df.columns:
                 data_df[["output", "label"]].to_csv(output_csv_path, index=False)

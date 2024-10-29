@@ -1,7 +1,8 @@
 import pickle
 import torch
 import warnings
-
+import os
+import numpy as np
 
 
 def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True):
@@ -88,3 +89,66 @@ def save_hidden_states(obj, filename):
 def load_hidden_states(filename):
     with open(filename, "rb") as f:
         return pickle.load(f)
+    
+
+def alt_save_hidden_states(obj, filepath, start_idx, exists_ok=False):
+    os.makedirs(filepath, exist_ok=exists_ok)
+    for i in range(len(obj)):
+        os.makedirs(f"{filepath}/{start_idx + i}", exist_ok=exists_ok)
+        layer_keys = list(obj[i].keys())
+        for layer_key in layer_keys:
+            os.makedirs(f"{filepath}/{start_idx + i}/{layer_key}", exist_ok=exists_ok)
+            hidden_keys = list(obj[i][layer_key].keys())
+            for hidden_key in hidden_keys:
+                item = obj[i][layer_key][hidden_key]
+                filepath = f"{filepath}/{start_idx + i}/{layer_key}/{hidden_key}.npy"
+                np.save(filepath, item)
+    return
+
+
+def null_state_processor(x):
+    return x
+
+
+def numpy_state_processor(x):
+    array = []
+    for layer_key in x.keys():
+        for hidden_key in x[layer_key].keys():
+            array.extend(x[layer_key][hidden_key][-1])
+    return np.array(array)
+
+
+def alt_load_hidden_states(filepath, start_idx, end_idx=None, state_processor=numpy_state_processor, ret_numpy=True):
+    files = os.listdir(filepath)
+    files = sorted([int(file) for file in files])
+    if start_idx > files[-1]:
+        warnings.warn("Start index is greater than the last file")
+        return None
+    elif end_idx is not None and end_idx < files[0]:
+        warnings.warn("End index is less than the first file")
+        return None
+    if end_idx is not None:
+        files = [file for file in files if file >= start_idx and file <= end_idx]
+    else:
+        files = [file for file in files if file >= start_idx]
+    hidden_states_list = load_as_dict(files, filepath, state_processor)
+    if ret_numpy:
+        return np.array(hidden_states_list)
+    else:
+        return hidden_states_list
+
+
+def load_as_dict(files, filepath, state_processor):
+    hidden_states_list = []
+    for file in files:
+        layer_keys = os.listdir(f"{filepath}/{file}")
+        hidden_states = {}
+        for layer_key in layer_keys:
+            hidden_states[layer_key] = {}
+            hidden_keys = os.listdir(f"{filepath}/{file}/{layer_key}")
+            for hidden_key in hidden_keys:
+                item = np.load(f"{filepath}/{file}/{layer_key}/{hidden_key}")
+                hidden_states[layer_key][hidden_key.split(".")[0]] = item
+        hidden_states = state_processor(hidden_states)
+        hidden_states_list.append(hidden_states)
+    return hidden_states_list
