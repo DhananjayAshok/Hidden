@@ -96,11 +96,54 @@ def process_mmlu():
     valid.to_csv(f"{data_dir}/base/mmlu_test.csv", index=False)
     return train, valid
 
+def process_real_toxicity_prompts():
+    ds = load_dataset("allenai/real-toxicity-prompts")
+    df = ds["train"].to_pandas()
+    df["text"] = df["prompt"].apply(lambda x: x["text"])
+    df = df[["text", "challenging"]]
+    df = df.sample(frac=1).reset_index(drop=True)
+    train = df.loc[:int(len(df) * 0.8)]
+    valid = df.loc[int(len(df) * 0.8):].reset_index(drop=True)
+    train["idx"] = train.index
+    valid["idx"] = valid.index
+    train.to_csv(f"{data_dir}/base/real_toxicity_prompts_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/base/real_toxicity_prompts_test.csv", index=False)
+    return train, valid
+
+def process_toxic_chat():
+    ds = load_dataset("lmsys/toxic-chat", "toxicchat0124")
+    def proc_df(df):
+        df["text"] = df["user_input"]
+        df["idx"] = df.index
+        return df[["text", "toxicity", "jailbreaking", "idx"]]
+    train = proc_df(ds["train"].to_pandas())
+    valid = proc_df(ds["test"].to_pandas())
+    train.to_csv(f"{data_dir}/base/toxic_chat_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/base/toxic_chat_test.csv", index=False)
+
 def process_qnota():
     # ambiguous, futuristic, unmeasurable, incorrect
     columns = ["incomplete_questions", "ambiguous_questions", "futuristic_questions", "unmeasurable_questions", "incorrect_questions"]
 
 
+def tmp_setuptoxic_chat():
+    train = pd.read_csv(f"{data_dir}/base/toxic_chat_train.csv")
+    valid = pd.read_csv(f"{data_dir}/base/toxic_chat_test.csv")
+    train.to_csv(f"{data_dir}/toxicity_avoidance/toxic_chat_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/toxicity_avoidance/toxic_chat_test.csv", index=False)
+    train["label"] = train["jailbreaking"]
+    valid["label"] = valid["jailbreaking"]
+    train.to_csv(f"{data_dir}/jailbreak/toxic_chat_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/jailbreak/toxic_chat_test.csv", index=False)
+    return train, valid 
+
+
+def tmp_setupreal_toxicity_prompts():
+    train = pd.read_csv(f"{data_dir}/base/real_toxicity_prompts_train.csv")
+    valid = pd.read_csv(f"{data_dir}/base/real_toxicity_prompts_test.csv")
+    train.to_csv(f"{data_dir}/toxicity_avoidance/real_toxicity_prompts_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/toxicity_avoidance/real_toxicity_prompts_test.csv", index=False)
+    return train, valid
 
 def tmp_setupqnota():
     files = ["incomplete_questions", "futuristic_questions", "unmeasurable_questions"]
