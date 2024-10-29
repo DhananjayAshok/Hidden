@@ -147,7 +147,7 @@ def tmp_setupreal_toxicity_prompts():
 
 def tmp_setupqnota():
     files = ["incomplete_questions", "futuristic_questions", "unmeasurable_questions"]
-    columns = ["idx", "group_idx", "type", "text", "unanswerable"]
+    columns = ["idx", "group_idx", "type", "text", "label"]
     data = []
     id_it = 0
     group_it = 0
@@ -167,6 +167,8 @@ def tmp_setupqnota():
     train = df.sample(frac=0.8)
     valid = df.drop(train.index).reset_index(drop=True)
     train = train.reset_index(drop=True)
+    train["label"] = train["label"].astype(int)
+    valid["label"] = valid["label"].astype(int)
     # save to data/unanswerable/qnota_train.csv
     train.to_csv(f"{data_dir}/unanswerable/qnota_train.csv", index=False)
     valid.to_csv(f"{data_dir}/unanswerable/qnota_test.csv", index=False)
@@ -207,7 +209,7 @@ def tmp_setupmmlu(k=2):
 
 
 def tmp_setupsquad():
-    train = pd.read_csv(f"{data_dir}/base/squad_train.csv")
+    train = pd.read_csv(f"{data_dir}/base/squad_train.csv").sample(12_000).reset_index(drop=True)
     valid = pd.read_csv(f"{data_dir}/base/squad_test.csv")
     def proc_df(df):
         df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
@@ -254,8 +256,12 @@ if __name__ == "__main__":
     process_selfaware()
     process_known_unkown()
     process_mmlu()
+    process_real_toxicity_prompts()
+    process_toxic_chat()
     tmp_setuphealthver()
     tmp_setupsquad()
     tmp_setupselfaware()
     tmp_setupmmlu()
     tmp_setupqnota()
+    tmp_setuptoxic_chat()
+    tmp_setupreal_toxicity_prompts()
