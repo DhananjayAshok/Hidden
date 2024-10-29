@@ -94,7 +94,7 @@ def load_hidden_states(filename):
 def alt_save_hidden_states(obj, folder, end_idx, exists_ok=False):
     os.makedirs(folder, exist_ok=exists_ok)
     for i in range(len(obj)):
-        os.makedirs(f"{folder}/{end_idx - i}", exist_ok=exists_ok)
+        os.makedirs(f"{folder}/{end_idx - i}")
         layer_keys = list(obj[i].keys())
         for layer_key in layer_keys:
             os.makedirs(f"{folder}/{end_idx - i}/{layer_key}", exist_ok=exists_ok)
