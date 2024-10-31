@@ -5,11 +5,11 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True, project_vocab=False):
+def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True, track_projection=False):
     config.track_layers = track_layers
     config.track_mlp = track_mlp
     config.track_attention = track_attention
-    config.project_vocab = project_vocab
+    config.track_projection = track_projection
     for element in track_layers:
          assert element < config.num_hidden_layers
     return
