@@ -106,11 +106,11 @@ def alt_save_hidden_states(obj, folder, end_idx, exists_ok=False):
     return
 
 
-def null_state_processor(x):
+def null_state_processor(x, task_offset=0):
     return x
 
 
-def numpy_state_processor(x):
+def numpy_state_processor(x, task_offset=0):
     array = []
     layers = list(x.keys())
     layer_numbers = [int(layer.split("_")[1]) for layer in layers]
@@ -120,11 +120,14 @@ def numpy_state_processor(x):
         hidden_keys = list(x[layer_key].keys())
         hidden_keys = sorted(hidden_keys)
         for hidden_key in hidden_keys:
-            array.extend(x[layer_key][hidden_key][-1])
+            if hidden_key == "projection":
+                array.extend(x[layer_key][hidden_key][-(1)])
+            else:
+                array.extend(x[layer_key][hidden_key][-(1+ task_offset)])
     return np.array(array)
 
 
-def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=numpy_state_processor, ret_numpy=True, include_files=None, exclude_files=None):
+def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=numpy_state_processor, ret_numpy=True, include_files=None, exclude_files=None, task_offset=0, exclude_layers=[], exclude_hidden=[]):
     files = os.listdir(filepath)
     files = sorted([int(file) for file in files])
     all_files = files
@@ -143,14 +146,14 @@ def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=
         files = [file for file in files if file not in exclude_files]
     if include_files is not None or exclude_files is not None:
         files = sorted(files)
-    hidden_states_list = load_as_dict(files, filepath, state_processor)
+    hidden_states_list = load_as_dict(files, filepath, state_processor, task_offset=task_offset, exclude_layers=exclude_layers, exclude_hidden=exclude_hidden)
     if ret_numpy:
         return np.array(hidden_states_list), files
     else:
         return hidden_states_list, files
 
 
-def load_as_dict(files, filepath, state_processor, exclude_layers=[], exclude_hidden=[]):
+def load_as_dict(files, filepath, state_processor, task_offset, exclude_layers, exclude_hidden):
     hidden_states_list = []
     for file in tqdm(files):
         layer_keys = os.listdir(f"{filepath}/{file}")
@@ -165,6 +168,6 @@ def load_as_dict(files, filepath, state_processor, exclude_layers=[], exclude_hi
                     continue
                 item = np.load(f"{filepath}/{file}/{layer_key}/{hidden_key}")
                 hidden_states[layer_key][hidden_key.split(".")[0]] = item
-        hidden_states = state_processor(hidden_states)
+        hidden_states = state_processor(hidden_states, task_offset=task_offset)
         hidden_states_list.append(hidden_states)
     return hidden_states_list
