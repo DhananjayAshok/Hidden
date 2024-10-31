@@ -44,10 +44,8 @@ def do_model_fit(model, X_train, y_train, X_test, y_test):
         train_scores[i] = int(train_scores[i] * 10000) / 100
         test_scores[i] = int(test_scores[i] * 10000) / 100
     print(f"Base rate: {y_train.mean()} (Train), {y_test.mean()} (Test)")
-    for i in range(len(train_thresholds)):
-        print(f"Threshold: {train_thresholds[i]}: ")
-        print(f"\nTrain Accuracy: {train_scores[i]}")
-        print(f"\nTest Accuracy: {test_scores[i]}")
+    for i in range(0, len(train_thresholds), 10):
+        print(f"Threshold: {train_thresholds[i]}| Train Accuracy: {train_scores[i]}| Test Accuracy: {test_scores[i]}")
     return train_pred, test_pred
 
 @click.command()
