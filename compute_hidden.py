@@ -5,15 +5,15 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True):
+def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True, project_vocab=False):
     config.track_layers = track_layers
     config.track_mlp = track_mlp
     config.track_attention = track_attention
+    config.project_vocab = project_vocab
     for element in track_layers:
          assert element < config.num_hidden_layers
     return
-     
-     
+          
 
 def detect_hidden_states_parameters(single_token_probe_hidden_output):
     assert isinstance(single_token_probe_hidden_output, dict)
@@ -150,15 +150,19 @@ def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=
         return hidden_states_list, files
 
 
-def load_as_dict(files, filepath, state_processor):
+def load_as_dict(files, filepath, state_processor, exclude_layers=[], exclude_hidden=[]):
     hidden_states_list = []
     for file in tqdm(files):
         layer_keys = os.listdir(f"{filepath}/{file}")
         hidden_states = {}
         for layer_key in layer_keys:
+            if layer_key in exclude_layers:
+                continue
             hidden_states[layer_key] = {}
             hidden_keys = os.listdir(f"{filepath}/{file}/{layer_key}")
             for hidden_key in hidden_keys:
+                if hidden_key in exclude_hidden:
+                    continue
                 item = np.load(f"{filepath}/{file}/{layer_key}/{hidden_key}")
                 hidden_states[layer_key][hidden_key.split(".")[0]] = item
         hidden_states = state_processor(hidden_states)

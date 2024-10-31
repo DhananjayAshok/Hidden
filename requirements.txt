@@ -8,3 +8,4 @@ click
 gdown
 datasets
 scikit-learn
+seaborn
