@@ -14,7 +14,7 @@ data_dir = os.getenv("DATA_DIR")
 @click.command()
 @click.option("--task", type=str, required=True)
 @click.option("--dataset", type=str, required=True)
-@click.option('model_kind', type=str, choices=["linear", "mlp", "transformer"], default="linear")
+@click.option('model_kind', type=click.Choice(['linear', 'mlp', 'transformer'], case_sensitive=False), default="linear")
 def main(task, dataset, model_kind):
     hidden_states_dir = f"{results_dir}/{task}/"
     X_train, train_keep_indices = alt_load_hidden_states(f"{hidden_states_dir}/train/{dataset}/")
@@ -47,3 +47,6 @@ class Linear:
 
     def score(self, X_train, y_train):
         return self.model.score(X_train, y_train)
+    
+if __name__ == "__main__":
+    main()
