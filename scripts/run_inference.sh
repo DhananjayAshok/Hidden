@@ -12,6 +12,7 @@ for dataset in "${datasets[@]}"
 do
     for split in "${splits[@]}"
     do
+        echo "XXXXXXXXXXXXXXXX $dataset $split XXXXXXXXXXXXXXXX"
         data_path="$DATA_DIR/$task/${dataset}_$split.csv"
         output_csv_path="$RESULTS_DIR/$task/${dataset}_${split}_inference.csv"
         output_hidden_dir="$RESULTS_DIR/$task/$split/${dataset}"
