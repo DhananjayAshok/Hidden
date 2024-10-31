@@ -126,52 +126,109 @@ def process_qnota():
     columns = ["incomplete_questions", "ambiguous_questions", "futuristic_questions", "unmeasurable_questions", "incorrect_questions"]
 
 
-def tmp_setuptoxic_chat():
-    train = pd.read_csv(f"{data_dir}/base/toxic_chat_train.csv")
-    valid = pd.read_csv(f"{data_dir}/base/toxic_chat_test.csv")
-    train.to_csv(f"{data_dir}/toxicity_avoidance/toxic_chat_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/toxicity_avoidance/toxic_chat_test.csv", index=False)
-    train["label"] = train["jailbreaking"]
-    valid["label"] = valid["jailbreaking"]
-    train.to_csv(f"{data_dir}/jailbreak/toxic_chat_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/jailbreak/toxic_chat_test.csv", index=False)
-    return train, valid 
+class ToxicityAvoidance:
+    @staticmethod
+    def setup_toxic_chat():
+        train = pd.read_csv(f"{data_dir}/base/toxic_chat_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/toxic_chat_test.csv")
+        train.to_csv(f"{data_dir}/toxicity_avoidance/toxic_chat_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/toxicity_avoidance/toxic_chat_test.csv", index=False)
+        return train, valid
+    
+    @staticmethod
+    def setup_real_toxicity_prompts():
+        train = pd.read_csv(f"{data_dir}/base/real_toxicity_prompts_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/real_toxicity_prompts_test.csv")
+        train.to_csv(f"{data_dir}/toxicity_avoidance/real_toxicity_prompts_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/toxicity_avoidance/real_toxicity_prompts_test.csv", index=False)
+        return train, valid
 
 
-def tmp_setupreal_toxicity_prompts():
-    train = pd.read_csv(f"{data_dir}/base/real_toxicity_prompts_train.csv")
-    valid = pd.read_csv(f"{data_dir}/base/real_toxicity_prompts_test.csv")
-    train.to_csv(f"{data_dir}/toxicity_avoidance/real_toxicity_prompts_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/toxicity_avoidance/real_toxicity_prompts_test.csv", index=False)
-    return train, valid
+class Jailbreak:
+    @staticmethod
+    def setup_toxic_chat():
+        train = pd.read_csv(f"{data_dir}/base/toxic_chat_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/toxic_chat_test.csv")
+        train["label"] = train["jailbreaking"]
+        valid["label"] = valid["jailbreaking"]
+        train.to_csv(f"{data_dir}/jailbreak/toxic_chat_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/jailbreak/toxic_chat_test.csv", index=False)
+        return train, valid
 
-def tmp_setupqnota():
-    files = ["incomplete_questions", "futuristic_questions", "unmeasurable_questions"]
-    columns = ["idx", "group_idx", "type", "text", "label"]
-    data = []
-    id_it = 0
-    group_it = 0
-    for file in files:
-        df = pd.read_json(f"{data_dir}/raw/qnota/{file}.json")
-        if file == "unmeasurable_questions":
-            df[file] = df["non_quantifiable_questions"] 
-        for i, row in df.iterrows():
-            unanswerable = row[file]['u']
-            answerable = row[file]['a']
-            data.append([id_it, group_it, file, answerable, False])
-            id_it += 1
-            data.append([id_it, group_it, file, unanswerable, True])
-            id_it += 1
-            group_it += 1
-    df = pd.DataFrame(data, columns=columns)
-    train = df.sample(frac=0.8)
-    valid = df.drop(train.index).reset_index(drop=True)
-    train = train.reset_index(drop=True)
-    train["label"] = train["label"].astype(int)
-    valid["label"] = valid["label"].astype(int)
-    # save to data/unanswerable/qnota_train.csv
-    train.to_csv(f"{data_dir}/unanswerable/qnota_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/unanswerable/qnota_test.csv", index=False)
+class Unanswerable:
+    @staticmethod
+    def setupsquad():
+        train = pd.read_csv(f"{data_dir}/base/squad_train.csv").sample(12_000).reset_index(drop=True)
+        valid = pd.read_csv(f"{data_dir}/base/squad_test.csv")
+        def proc_df(df):
+            df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+            df["label"] = df["unanswerable"].astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        train.to_csv(f"{data_dir}/unanswerable/squad_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/unanswerable/squad_test.csv", index=False)
+        return train, valid
+    
+    @staticmethod
+    def setupqnota():
+        files = ["incomplete_questions", "futuristic_questions", "unmeasurable_questions"]
+        columns = ["idx", "group_idx", "type", "text", "label"]
+        data = []
+        id_it = 0
+        group_it = 0
+        for file in files:
+            df = pd.read_json(f"{data_dir}/raw/qnota/{file}.json")
+            if file == "unmeasurable_questions":
+                df[file] = df["non_quantifiable_questions"] 
+            for i, row in df.iterrows():
+                unanswerable = row[file]['u']
+                answerable = row[file]['a']
+                data.append([id_it, group_it, file, answerable, False])
+                id_it += 1
+                data.append([id_it, group_it, file, unanswerable, True])
+                id_it += 1
+                group_it += 1
+        df = pd.DataFrame(data, columns=columns)
+        train = df.sample(frac=0.8)
+        valid = df.drop(train.index).reset_index(drop=True)
+        train = train.reset_index(drop=True)
+        train["label"] = train["label"].astype(int)
+        valid["label"] = valid["label"].astype(int)
+        # save to data/unanswerable/qnota_train.csv
+        train.to_csv(f"{data_dir}/unanswerable/qnota_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/unanswerable/qnota_test.csv", index=False)
+        return train, valid
+
+    @staticmethod
+    def setuphealthver():
+        # will set up healthver for the NIE task
+        train = pd.read_csv(f"{data_dir}/base/healthver_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/healthver_test.csv")
+        def proc_df(df):
+            df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+            df["label"] = df["unanswerable"].astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        train.to_csv(f"{data_dir}/unanswerable/healthver_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/unanswerable/healthver_test.csv", index=False)
+
+    @staticmethod
+    def setupselfaware():
+        train = pd.read_csv(f"{data_dir}/base/selfaware_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/selfaware_test.csv")
+        def proc_df(df):
+            df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+            df["label"] = df["unanswerable"].astype(int)
+            wouldyous = df['text'].apply(lambda x: "would you rather" in x.lower())
+            df = df[~wouldyous]
+            df = df.reset_index(drop=True)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        train.to_csv(f"{data_dir}/unanswerable/selfaware_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/unanswerable/selfaware_test.csv", index=False)
 
 
 def mmlu_choices_to_text(choices):
@@ -185,72 +242,32 @@ def mmlu_choices_to_text(choices):
 def mmlu_answer_to_letter(answer):
     return ["A", "B", "C", "D"][answer]
 
-def tmp_setupmmlu(k=2):
-    train = pd.read_csv(f"{data_dir}/base/mmlu_train.csv")
-    valid = pd.read_csv(f"{data_dir}/base/mmlu_test.csv")
-    system_prompt = "Answer the following MCQ by providing the correct option"
-    def proc_df(df):
-        df["choices"] = df["choices"].apply(eval)
-        for i in range(len(df)):
-            subject = df.loc[i, "subject"]
-            train_subjects = train[(train["subject"] == subject) & (train["idx"] != df.loc[i, "idx"])].reset_index(drop=True)
-            train_subjects = train_subjects.sample(k).reset_index(drop=True)
-            prompt = ""
-            for j in range(k):
-                prompt += f"\nQuestion: {train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {mmlu_answer_to_letter(train_subjects.loc[j, 'answer'])} [STOP]"
-            df.loc[i, "text"] = f"{system_prompt}\n{prompt}\nQuestion: {df.loc[i, 'question']}{mmlu_choices_to_text(df.loc[i, 'choices'])}\nAnswer: "
-            df.loc[i, "label"] = mmlu_answer_to_letter(df.loc[i, "answer"])
-        return df[["idx", "text", "label"]]
-    train_df = proc_df(train)
-    valid = proc_df(valid)
-    train_df.to_csv(f"{data_dir}/confidence/mmlu_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/confidence/mmlu_test.csv", index=False)
-    return 
 
+class Confidence:
+    @staticmethod
+    def setupmmlu(k=2):
+        train = pd.read_csv(f"{data_dir}/base/mmlu_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/mmlu_test.csv")
+        system_prompt = "Answer the following MCQ by providing the correct option"
+        def proc_df(df):
+            df["choices"] = df["choices"].apply(eval)
+            for i in range(len(df)):
+                subject = df.loc[i, "subject"]
+                train_subjects = train[(train["subject"] == subject) & (train["idx"] != df.loc[i, "idx"])].reset_index(drop=True)
+                train_subjects = train_subjects.sample(k).reset_index(drop=True)
+                prompt = ""
+                for j in range(k):
+                    prompt += f"\nQuestion: {train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {mmlu_answer_to_letter(train_subjects.loc[j, 'answer'])} [STOP]"
+                df.loc[i, "text"] = f"{system_prompt}\n{prompt}\nQuestion: {df.loc[i, 'question']}{mmlu_choices_to_text(df.loc[i, 'choices'])}\nAnswer: "
+                df.loc[i, "label"] = mmlu_answer_to_letter(df.loc[i, "answer"])
+            return df[["idx", "text", "label"]]
+        train_df = proc_df(train)
+        valid = proc_df(valid)
+        train_df.to_csv(f"{data_dir}/confidence/mmlu_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/confidence/mmlu_test.csv", index=False)
+        return train_df, valid
 
-def tmp_setupsquad():
-    train = pd.read_csv(f"{data_dir}/base/squad_train.csv").sample(12_000).reset_index(drop=True)
-    valid = pd.read_csv(f"{data_dir}/base/squad_test.csv")
-    def proc_df(df):
-        df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
-        df["label"] = df["unanswerable"].astype(int)
-        return df[["idx", "text", "label"]]
-    train = proc_df(train)
-    valid = proc_df(valid)
-    train.to_csv(f"{data_dir}/unanswerable/squad_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/unanswerable/squad_test.csv", index=False)
-
-
-def tmp_setupselfaware():
-    train = pd.read_csv(f"{data_dir}/base/selfaware_train.csv")
-    valid = pd.read_csv(f"{data_dir}/base/selfaware_test.csv")
-    def proc_df(df):
-        df["text"] = "The following question is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
-        df["label"] = df["unanswerable"].astype(int)
-        wouldyous = df['text'].apply(lambda x: "would you rather" in x.lower())
-        df = df[~wouldyous]
-        df = df.reset_index(drop=True)
-        return df[["idx", "text", "label"]]
-    train = proc_df(train)
-    valid = proc_df(valid)
-    train.to_csv(f"{data_dir}/unanswerable/selfaware_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/unanswerable/selfaware_test.csv", index=False)
-
-
-def tmp_setuphealthver():
-    # will set up healthver for the NIE task
-    train = pd.read_csv(f"{data_dir}/base/healthver_train.csv")
-    valid = pd.read_csv(f"{data_dir}/base/healthver_test.csv")
-    def proc_df(df):
-        df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
-        df["label"] = df["unanswerable"].astype(int)
-        return df[["idx", "text", "label"]]
-    train = proc_df(train)
-    valid = proc_df(valid)
-    train.to_csv(f"{data_dir}/unanswerable/healthver_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/unanswerable/healthver_test.csv", index=False)
-
-if __name__ == "__main__":
+def process_all():
     process_squad()
     process_healthver()
     process_selfaware()
@@ -258,10 +275,19 @@ if __name__ == "__main__":
     process_mmlu()
     process_real_toxicity_prompts()
     process_toxic_chat()
-    tmp_setuphealthver()
-    tmp_setupsquad()
-    tmp_setupselfaware()
-    tmp_setupmmlu()
-    tmp_setupqnota()
-    tmp_setuptoxic_chat()
-    tmp_setupreal_toxicity_prompts()
+
+def setup_all():
+    Unanswerable.setuphealthver()
+    Unanswerable.setupselfaware()
+    Unanswerable.setupsquad()
+    Unanswerable.setupqnota()
+    ToxicityAvoidance.setup_toxic_chat()
+    ToxicityAvoidance.setup_real_toxicity_prompts()
+    Jailbreak.setup_toxic_chat()
+    Jailbreak.setup_toxic_chat()
+    Confidence.setupmmlu()
+
+
+if __name__ == "__main__":
+    process_all()
+    setup_all()
