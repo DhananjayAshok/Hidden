@@ -20,7 +20,7 @@ import os
 @click.option("--track_layers", type=str, default="2,15,30")
 @click.option("--track_mlp", type=bool, default=True)
 @click.option("--track_attention", type=bool, default=True)
-@click.option("--track_projection", type=bool, default=False)
+@click.option("--track_projection", type=bool, default=True)
 def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, start_idx, stop_idx, max_new_tokens, stop_strings, remove_stop_strings, track_layers, track_mlp, track_attention, track_projection):
     track_layers = [int(x) for x in track_layers.split(",")]
     stop_strings = stop_strings.split(",")

@@ -17,6 +17,8 @@ def get_xydf(task, dataset, split="train", random_sample=None):
     assert split in ["train", "test"]
     hidden_states_dir = f"{results_dir}/{task}/"
     df = pd.read_csv(f"{results_dir}/{task}/{dataset}_{split}_inference.csv")
+    available_indices = [int(f) for f in os.listdir(f"{hidden_states_dir}/{split}/{dataset}/")]
+    df = df[df.index.isin(available_indices)]
     indices = None
     start_idx = 0
     end_idx = None

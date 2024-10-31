@@ -7,8 +7,8 @@ import os
 @click.command()
 @click.option("--file", type=str, required=True)
 @click.option("--pred_column", type=str, default="output")
-@click.option("--label_column", type=str, default="label")
-@click.option('--correct_column', type=str, default="correct")
+@click.option("--label_column", type=str, default="gold")
+@click.option('--correct_column', type=str, default="label")
 @click.option('--overwrite', type=bool, default=False)
 @click.option("--cot", type=bool, default=False)
 def main(file, pred_column, label_column, correct_column, overwrite, cot):

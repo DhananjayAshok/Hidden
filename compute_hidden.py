@@ -121,7 +121,7 @@ def numpy_state_processor(x, task_offset=0):
         hidden_keys = sorted(hidden_keys)
         for hidden_key in hidden_keys:
             if hidden_key == "projection":
-                array.extend(x[layer_key][hidden_key][-(1)])
+                array.extend(x[layer_key][hidden_key][-(1+task_offset):])
             else:
                 array.extend(x[layer_key][hidden_key][-(1+ task_offset)])
     return np.array(array)
