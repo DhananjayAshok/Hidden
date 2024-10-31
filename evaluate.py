@@ -49,3 +49,7 @@ def normal_check(prediction, label):
     if prediction is None or label is None:
         return None
     return prediction.lower().strip() == label.lower().strip()
+
+
+if __name__ == "__main__":
+    main()
