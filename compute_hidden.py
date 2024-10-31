@@ -3,7 +3,7 @@ import torch
 import warnings
 import os
 import numpy as np
-
+from tqdm import tqdm
 
 def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True):
     config.track_layers = track_layers
@@ -124,29 +124,37 @@ def numpy_state_processor(x):
     return np.array(array)
 
 
-def alt_load_hidden_states(filepath, start_idx, end_idx=None, state_processor=numpy_state_processor, ret_numpy=True):
+def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=numpy_state_processor, ret_numpy=True, include_files=None, exclude_files=None):
     files = os.listdir(filepath)
     files = sorted([int(file) for file in files])
+    all_files = files
     if start_idx > files[-1]:
         warnings.warn("Start index is greater than the last file")
         return None
     elif end_idx is not None and end_idx < files[0]:
         warnings.warn("End index is less than the first file")
         return None
-    if end_idx is not None:
+    if end_idx is not None:  # TODO: CHECK IF THIS SHOULD BE INCLUSIVE. IT IS NOW
         files = [file for file in files if file >= start_idx and file <= end_idx]
     else:
         files = [file for file in files if file >= start_idx]
+    if include_files is not None:
+        assert all([file in all_files for file in include_files])
+        files.extend(include_files)
+    if exclude_files is not None:
+        files = [file for file in files if file not in exclude_files]
+    if include_files is not None or exclude_files is not None:
+        files = sorted(files)
     hidden_states_list = load_as_dict(files, filepath, state_processor)
     if ret_numpy:
-        return np.array(hidden_states_list)
+        return np.array(hidden_states_list), files
     else:
-        return hidden_states_list
+        return hidden_states_list, files
 
 
 def load_as_dict(files, filepath, state_processor):
     hidden_states_list = []
-    for file in files:
+    for file in tqdm(files):
         layer_keys = os.listdir(f"{filepath}/{file}")
         hidden_states = {}
         for layer_key in layer_keys:

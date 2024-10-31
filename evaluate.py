@@ -32,6 +32,8 @@ def main(file, pred_column, label_column, correct_column, overwrite, cot):
     df.to_csv(file, index=False)
 
 def cot_check(prediction, label):
+    if prediction is None or label is None:
+        return None
     pred_labels = prediction.split("||")
     if len(pred_labels) == 1:
         warnings.warn(f"Supposed to be COT but prediction {prediction} does not have ||")
@@ -44,4 +46,6 @@ def cot_check(prediction, label):
     return normal_check(pred_labels, label)
 
 def normal_check(prediction, label):
+    if prediction is None or label is None:
+        return None
     return prediction.lower().strip() == label.lower().strip()
