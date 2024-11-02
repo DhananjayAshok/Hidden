@@ -93,18 +93,22 @@ def load_hidden_states(filename):
 
 def alt_save_hidden_states(obj, folder, end_idx, exists_ok=False):
     os.makedirs(folder, exist_ok=exists_ok)
+    existings = []
     for i in range(len(obj)):
         if os.path.exists(f"{folder}/{end_idx - i}") and exists_ok:
-            warnings.warn(f"Folder {folder}/{end_idx - i} already exists. Overwriting")
+            existings.append(end_idx - i)
         os.makedirs(f"{folder}/{end_idx - i}", exist_ok=exists_ok)
-        layer_keys = list(obj[end_idx - i].keys())
+        index = len(obj) - 1 - i
+        layer_keys = list(obj[index].keys())
         for layer_key in layer_keys:
             os.makedirs(f"{folder}/{end_idx - i}/{layer_key}", exist_ok=exists_ok)
-            hidden_keys = list(obj[end_idx - i][layer_key].keys())
+            hidden_keys = list(obj[index][layer_key].keys())
             for hidden_key in hidden_keys:
-                item = obj[end_idx - i][layer_key][hidden_key]
+                item = obj[index][layer_key][hidden_key]
                 filepath = f"{folder}/{end_idx - i}/{layer_key}/{hidden_key}.npy"
                 np.save(filepath, item)
+    if len(existings) > 0:
+        warnings.warn(f"Overwrote existing files {existings.sorted()}")
     return
 
 
