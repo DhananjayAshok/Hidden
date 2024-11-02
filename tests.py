@@ -141,8 +141,9 @@ class TestDataFunctions(unittest.TestCase):
         self.assertTrue(set(a.columns) == set(b.columns))
         self.assertTrue(len(a) == len(b))
         for column in a.columns:
-            if (a[column] != b[column]).any():
-                return False
+            for i in range(len(a)):
+                if a[column][i] != b[column][i]:
+                    return False
         return True
 
     def test_setup_data(self):
