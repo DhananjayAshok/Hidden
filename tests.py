@@ -11,10 +11,13 @@ from compute_hidden import *
 import torch
 import numpy as np
 import os
+import shutil
+
+
 
 model_name = "meta-llama/Llama-3.1-8B-Instruct"
-tracking_mlp_pre_residual = True
-results_dir=os.environ("RESULTS_DIR")+"/tests"
+tracking_mlp_pre_residual = False
+results_dir=os.environ["RESULTS_DIR"]+"/tests"
 if not os.path.exists(results_dir):
     os.makedirs(results_dir+"/train/testing")
     os.makedirs(results_dir+"/test/testing")
@@ -24,9 +27,9 @@ test_save_folder = results_dir+"/test/testing"
 
 def clear_save_cache():
     if os.path.exists(train_save_folder):
-        os.rmdir(train_save_folder)
+        shutil.rmtree(train_save_folder)
     if os.path.exists(test_save_folder):
-        os.rmdir(test_save_folder)
+        shutil.rmtree(test_save_folder)
     os.makedirs(results_dir+"/train/testing")
     os.makedirs(results_dir+"/test/testing")
 
@@ -57,7 +60,7 @@ def compute_mlp_correct(prompts, track_layers):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
     config = AutoConfig.from_pretrained(model_name)
-    set_tracking_config(config, track_layers=track_layers, track_mlp=True, track_attention=False, track_projection=False)
+    set_tracking_config(config, track_layers=track_layers, track_mlp=True, track_attention=True, track_projection=True)
     model = AutoModelForCausalLM.from_pretrained(model_name, config=config, device_map="auto")
     corrects_all = []
     hidden_states_all = []
@@ -109,19 +112,24 @@ class TestHiddenStates(unittest.TestCase):
         track_layers = [2, 15, 30]
         prompts = ["There is no ", "The quick brown ."]
         corrects_all, hidden_states_all = compute_mlp_correct(prompts, track_layers)
-        alt_save_hidden_states(hidden_states_all, train_save_folder, 0, exists_ok=True)
+        alt_save_hidden_states(hidden_states_all, train_save_folder, 1, exists_ok=True)
         save_hidden_states(hidden_states_all, f"{test_save_folder}/test_hidden.pkl")
-        alt_loaded_hidden_states = alt_load_hidden_states(train_save_folder, state_processor=null_state_processor)
+        alt_loaded_hidden_states, indices = alt_load_hidden_states(train_save_folder, state_processor=null_state_processor)
         loaded_hidden_states = load_hidden_states(f"{test_save_folder}/test_hidden.pkl")
-        breakpoint()
-
-
-
-
-    
-
-
-
+        def check_same_walk(lesser, greater):
+            self.assertTrue(len(lesser) == len(greater))
+            for i in range(len(lesser)):
+                self.assertTrue(all([key in lesser[i] for key in greater[i]]))
+                for layer in lesser[i]:
+                    for key in greater[i][layer]:
+                        self.assertTrue(array_equal(lesser[i][layer][key], greater[i][layer][key]))
+        check_same_walk(hidden_states_all, alt_loaded_hidden_states)
+        check_same_walk(hidden_states_all, loaded_hidden_states)
+        check_same_walk(alt_loaded_hidden_states, loaded_hidden_states)
+        if not tracking_mlp_pre_residual:
+            check_same_walk(corrects_all, alt_loaded_hidden_states)
+            check_same_walk(corrects_all, loaded_hidden_states)
+        return
 
 if __name__ == "__main__":
-    unittest.main()
+    TestHiddenStates().test_compute_hidden()
