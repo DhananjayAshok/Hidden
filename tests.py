@@ -88,6 +88,17 @@ def compute_mlp_correct(prompts, track_layers):
 
 
 
+def compare_hidden_state_lists(a, b, check_layers, check_keys, testclass):
+    testclass.assertTrue(len(a) == len(b))
+    for i in range(len(a)):
+        for layer in check_layers:
+            for key in check_keys:
+                a_array = a[i][f"layer_{layer}"][key]
+                b_array = b[i][f"layer_{layer}"][key]
+                testclass.assertTrue(shape_equal(a_array, b_array))
+                testclass.assertTrue(array_equal(a_array, b_array))
+    return
+
 
 class TestHiddenStates(unittest.TestCase):
     def test_compute_hidden(self):
@@ -96,16 +107,7 @@ class TestHiddenStates(unittest.TestCase):
         track_layers = [2, 15, 30]
         prompt = "There is no "
         corrects_all, hidden_states_all = compute_mlp_correct([prompt], track_layers)
-        for i in range(len(corrects_all)):
-            corrects = corrects_all[i]
-            hidden_states = hidden_states_all[i]
-            for hidden_layer in hidden_states:
-                hidden_array = hidden_states[hidden_layer]["mlp"]
-                correct_array = corrects[hidden_layer]["mlp"]
-                self.assertTrue(shape_equal(hidden_array, correct_array))
-                self.assertTrue(array_equal(hidden_array, correct_array))
-        del corrects_all, hidden_states_all
-        torch.cuda.empty_cache()
+        compare_hidden_state_lists(corrects_all, hidden_states_all, track_layers, ["mlp"], self)
         return
     
     def test_save_load_hidden(self):
@@ -116,19 +118,11 @@ class TestHiddenStates(unittest.TestCase):
         save_hidden_states(hidden_states_all, f"{test_save_folder}/test_hidden.pkl")
         alt_loaded_hidden_states, indices = alt_load_hidden_states(train_save_folder, state_processor=null_state_processor)
         loaded_hidden_states = load_hidden_states(f"{test_save_folder}/test_hidden.pkl")
-        def check_same_walk(lesser, greater):
-            self.assertTrue(len(lesser) == len(greater))
-            for i in range(len(lesser)):
-                self.assertTrue(all([key in lesser[i] for key in greater[i]]))
-                for layer in lesser[i]:
-                    for key in greater[i][layer]:
-                        self.assertTrue(array_equal(lesser[i][layer][key], greater[i][layer][key]))
-        check_same_walk(hidden_states_all, alt_loaded_hidden_states)
-        check_same_walk(hidden_states_all, loaded_hidden_states)
-        check_same_walk(alt_loaded_hidden_states, loaded_hidden_states)
+        compare_hidden_state_lists(alt_loaded_hidden_states, hidden_states_all, track_layers, ["mlp", "attention", "projection"], self)
+        compare_hidden_state_lists(loaded_hidden_states, hidden_states_all, track_layers, ["mlp", "attention", "projection"], self)
+        compare_hidden_state_lists(alt_loaded_hidden_states, loaded_hidden_states, track_layers, ["mlp", "attention", "projection"], self)
         if not tracking_mlp_pre_residual:
-            check_same_walk(corrects_all, alt_loaded_hidden_states)
-            check_same_walk(corrects_all, loaded_hidden_states)
+            compare_hidden_state_lists(corrects_all, hidden_states_all, track_layers, ["mlp"], self)  # Sanity
         return
 
 if __name__ == "__main__":
