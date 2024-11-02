@@ -5,7 +5,7 @@ splits=("train" "test")
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 
 
-declare -A max_new_token_dict=( ["confidence"]=5 ["unanswerable"]=1 )
+declare -A max_new_token_dict=( ["confidence"]=5 ["unanswerable"]=1 ["toxicity_avoidance"]=20)
 source proj_params.sh
 
 for dataset in "${datasets[@]}"
