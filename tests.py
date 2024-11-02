@@ -185,10 +185,10 @@ class TestDataFunctions(unittest.TestCase):
             self.assertFalse(self.df_equal(train1, train3))
         
         for setup_fn in setup_fns:
-            train1, test1, dataset_name = setup_fn(save=False, random_seed=42)
-            train2, test2, dataset_name = setup_fn(save=False, random_seed=42)
-            train3, test3, dataset_name = setup_fn(save=False, random_seed=43)
-            print(f"Dataset: {dataset_name}")
+            print(f"Processing: {setup_fn.__name__}")
+            train1, test1 = setup_fn(save=False, random_seed=42)
+            train2, test2 = setup_fn(save=False, random_seed=42)
+            train3, test3 = setup_fn(save=False, random_seed=43)
             self.assertTrue(self.df_equal(train1, train2))
             self.assertTrue(self.df_equal(test1, test2))
             self.assertFalse(self.df_equal(train1, train3))
