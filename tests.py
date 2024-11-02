@@ -6,15 +6,17 @@ import unittest
 from warnings import warn
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from compute_hidden import *
+from data import *
 import torch
 import numpy as np
 import os
 import shutil
+import pandas as pd
 
 
 
 model_name = "meta-llama/Llama-3.1-8B-Instruct"
-tracking_mlp_pre_residual = False
+tracking_mlp_pre_residual = True
 results_dir=os.environ["RESULTS_DIR"]+"/tests"
 if not os.path.exists(results_dir):
     os.makedirs(results_dir+"/train/testing")
@@ -86,30 +88,29 @@ def compute_mlp_correct(prompts, track_layers):
 
 
 
-def compare_hidden_state_lists(a, b, check_layers, check_keys, testclass):
-    testclass.assertTrue(len(a) == len(b))
-    for i in range(len(a)):
-        for layer in check_layers:
-            for key in check_keys:
-                testclass.assertTrue(f"layer_{layer}" in a[i])
-                testclass.assertTrue(f"layer_{layer}" in b[i])
-                testclass.assertTrue(key in a[i][f"layer_{layer}"])
-                testclass.assertTrue(key in b[i][f"layer_{layer}"])                
-                a_array = a[i][f"layer_{layer}"][key]
-                b_array = b[i][f"layer_{layer}"][key]
-                testclass.assertTrue(shape_equal(a_array, b_array))
-                testclass.assertTrue(array_equal(a_array, b_array))
-    return
-
-
 class TestHiddenStates(unittest.TestCase):
+    def compare_hidden_state_lists(self, a, b, check_layers, check_keys):
+        self.assertTrue(len(a) == len(b))
+        for i in range(len(a)):
+            for layer in check_layers:
+                for key in check_keys:
+                    self.assertTrue(f"layer_{layer}" in a[i])
+                    self.assertTrue(f"layer_{layer}" in b[i])
+                    self.assertTrue(key in a[i][f"layer_{layer}"])
+                    self.assertTrue(key in b[i][f"layer_{layer}"])                
+                    a_array = a[i][f"layer_{layer}"][key]
+                    b_array = b[i][f"layer_{layer}"][key]
+                    self.assertTrue(shape_equal(a_array, b_array))
+                    self.assertTrue(array_equal(a_array, b_array))
+        return
+
     def test_compute_hidden(self):
         if tracking_mlp_pre_residual:
             return
         track_layers = [2, 15, 30]
         prompt = "There is no "
         corrects_all, hidden_states_all = compute_mlp_correct([prompt], track_layers)
-        compare_hidden_state_lists(corrects_all, hidden_states_all, track_layers, ["mlp"], self)
+        self.compare_hidden_state_lists(corrects_all, hidden_states_all, track_layers, ["mlp"])
         return
     
     def test_save_load_hidden(self):
@@ -120,15 +121,65 @@ class TestHiddenStates(unittest.TestCase):
         save_hidden_states(hidden_states_all, f"{test_save_folder}/test_hidden.pkl")
         alt_loaded_hidden_states, indices = alt_load_hidden_states(train_save_folder, state_processor=null_state_processor)
         loaded_hidden_states = load_hidden_states(f"{test_save_folder}/test_hidden.pkl")
-        compare_hidden_state_lists(alt_loaded_hidden_states, hidden_states_all, track_layers, ["mlp", "attention", "projection"], self)
-        compare_hidden_state_lists(loaded_hidden_states, hidden_states_all, track_layers, ["mlp", "attention", "projection"], self)
-        compare_hidden_state_lists(alt_loaded_hidden_states, loaded_hidden_states, track_layers, ["mlp", "attention", "projection"], self)
+        self.compare_hidden_state_lists(alt_loaded_hidden_states, hidden_states_all, track_layers, ["mlp", "attention", "projection"])
+        self.compare_hidden_state_lists(loaded_hidden_states, hidden_states_all, track_layers, ["mlp", "attention", "projection"])
+        self.compare_hidden_state_lists(alt_loaded_hidden_states, loaded_hidden_states, track_layers, ["mlp", "attention", "projection"])
         if not tracking_mlp_pre_residual:
-            compare_hidden_state_lists(corrects_all, hidden_states_all, track_layers, ["mlp"], self)  # Sanity
+            self.compare_hidden_state_lists(corrects_all, hidden_states_all, track_layers, ["mlp"])  # Sanity
+        clear_save_cache()
         return
     
 class TestDataFunctions(unittest.TestCase):
-    pass
+    def basic_test(self, df):
+        for column in ["idx", "text"]:
+            self.assertTrue(column in df.columns)
+        either = "label" in df.columns or "gold" in df.columns
+        self.assertTrue(either)
+        return
+    
+    def df_equal(self, a, b):
+        self.assertTrue(set(a.columns) == set(b.columns))
+        self.assertTrue(len(a) == len(b))
+        for column in a.columns:
+            if not (a[column] == b[column]).all():
+                return False
+        return True
+
+    def test_setup_data(self):
+        setup_fns = [ToxicityAvoidance.setup_toxic_chat, ToxicityAvoidance.setup_real_toxicity_prompts, 
+                     Jailbreak.setup_toxic_chat, Unanswerable.setuphealthver, Unanswerable.setupqnota, 
+                     Unanswerable.setupselfaware, Unanswerable.setupsquad, Unanswerable.setupknown_unknown, 
+                     Confidence.setupmmlu]
+        for setup_fn in setup_fns:
+            train, test, dataset_name = setup_fn(save=False)
+            print(f"Dataset: {dataset_name}")
+            self.basic_test(train)
+            self.basic_test(test)
+        return
+    
+    def test_randomization(self):
+        process_fns = [process_selfaware]
+        setup_fns = [Unanswerable.setupqnota, Unanswerable.setupsquad, Confidence.setupmmlu]
+        for process_fn in process_fns:
+            name = process_fn.__name__
+            print(f"Processing: {name}")
+            train1, test1 = process_fn(save=False, random_seed=42)
+            train2, test2 = process_fn(save=False, random_seed=42)
+            train3, test3 = process_fn(save=False, random_seed=43)
+            self.assertTrue(self.df_equal(train1, train2))
+            self.assertTrue(self.df_equal(test1, test2))
+            self.assertFalse(self.df_equal(train1, train3))
+        
+        for setup_fn in setup_fns:
+            train1, test1, dataset_name = setup_fn(save=False, random_seed=42)
+            train2, test2, dataset_name = setup_fn(save=False, random_seed=42)
+            train3, test3, dataset_name = setup_fn(save=False, random_seed=43)
+            print(f"Dataset: {dataset_name}")
+            self.assertTrue(self.df_equal(train1, train2))
+            self.assertTrue(self.df_equal(test1, test2))
+            self.assertFalse(self.df_equal(train1, train3))
+
+        return
 
 
 
