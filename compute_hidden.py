@@ -97,12 +97,12 @@ def alt_save_hidden_states(obj, folder, end_idx, exists_ok=False):
         if os.path.exists(f"{folder}/{end_idx - i}") and exists_ok:
             warnings.warn(f"Folder {folder}/{end_idx - i} already exists. Overwriting")
         os.makedirs(f"{folder}/{end_idx - i}", exist_ok=exists_ok)
-        layer_keys = list(obj[i].keys())
+        layer_keys = list(obj[end_idx - i].keys())
         for layer_key in layer_keys:
             os.makedirs(f"{folder}/{end_idx - i}/{layer_key}", exist_ok=exists_ok)
-            hidden_keys = list(obj[i][layer_key].keys())
+            hidden_keys = list(obj[end_idx - i][layer_key].keys())
             for hidden_key in hidden_keys:
-                item = obj[i][layer_key][hidden_key]
+                item = obj[end_idx - i][layer_key][hidden_key]
                 filepath = f"{folder}/{end_idx - i}/{layer_key}/{hidden_key}.npy"
                 np.save(filepath, item)
     return
