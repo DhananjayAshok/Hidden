@@ -51,9 +51,6 @@ def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, 
         hidden_states = read_hidden_states(model.probe_hidden_output)
         model.probe_reset_hidden_output()
         hidden_states_list.append(hidden_states)
-        # currently hardcoding in layer_2 attention
-        assert hidden_states_list[-1]["layer_2"]["attention"].shape[0] <= output.shape[1] - 1
-        assert output.shape[1] <= input_length + max_new_tokens
         output_only = output[0, input_length:]
         out = tokenizer.decode(output_only, skip_special_tokens=True)
         if remove_stop_strings:

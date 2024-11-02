@@ -1,6 +1,4 @@
 # Write tests for:
-# Saving of hidden states
-# Loading of hidden states
 # Modeling of probes on trivial instance
 # Modeling of probes on non-trivial instance
 # -------------------------------------------
@@ -33,7 +31,7 @@ def clear_save_cache():
     os.makedirs(results_dir+"/train/testing")
     os.makedirs(results_dir+"/test/testing")
 
-eps = 1e-5
+eps = 1e-7
 
 def to_numpy(tensor):
     return tensor.detach().cpu().numpy()
@@ -44,7 +42,7 @@ def diagnostic_difference(a, b):
     print(f"Max Comparison: {a.max()}, {b.max()}")
     print(f"Min Comparison: {a.min()}, {b.min()}")
     print(f"Sum Comparison: {a.sum()}, {b.sum()}")
-    print(f"Std Comparison: {np.abs(a-b).max()}")
+    print(f"Std Comparison: {a.std()}, {b.std()}")
     print(f"Mean Diff Comparison: {np.abs(a-b).mean()}")
     print(f"Max Diff Comparison: {np.abs(a-b).max()}")
     print(f"Min Diff Comparison: {np.abs(a-b).min()}")
@@ -93,6 +91,10 @@ def compare_hidden_state_lists(a, b, check_layers, check_keys, testclass):
     for i in range(len(a)):
         for layer in check_layers:
             for key in check_keys:
+                testclass.assertTrue(f"layer_{layer}" in a[i])
+                testclass.assertTrue(f"layer_{layer}" in b[i])
+                testclass.assertTrue(key in a[i][f"layer_{layer}"])
+                testclass.assertTrue(key in b[i][f"layer_{layer}"])                
                 a_array = a[i][f"layer_{layer}"][key]
                 b_array = b[i][f"layer_{layer}"][key]
                 testclass.assertTrue(shape_equal(a_array, b_array))
@@ -124,6 +126,11 @@ class TestHiddenStates(unittest.TestCase):
         if not tracking_mlp_pre_residual:
             compare_hidden_state_lists(corrects_all, hidden_states_all, track_layers, ["mlp"], self)  # Sanity
         return
+    
+class TestDataFunctions(unittest.TestCase):
+    pass
+
+
 
 if __name__ == "__main__":
     TestHiddenStates().test_compute_hidden()
