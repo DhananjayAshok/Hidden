@@ -1,6 +1,5 @@
-task="confidence"
-datasets=("mmlu")
-datasets=("squad" "healthver" "qnota" "selfaware")
+task="unanswerable"
+datasets=("squad" "healthver" "qnota" "selfaware" "known_uknown")
 splits=("train" "test")
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 
