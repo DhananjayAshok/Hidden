@@ -9,6 +9,7 @@ from warnings import warn
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM
 from compute_hidden import set_tracking_config, read_hidden_states, save_hidden_states, alt_save_hidden_states, load_hidden_states, alt_load_hidden_states
 import torch
+import numpy as np
 
 model_name = "meta-llama/Llama-3.1-8B-Instruct"
 
@@ -17,10 +18,12 @@ eps = 1e-5
 def to_numpy(tensor):
     return tensor.detach().cpu().numpy()
 
+
+def shape_equal(a, b):
+    return a.shape == b.shape
+
 def array_equal(a, b):
-    if a.shape != b.shape:
-        return False
-    return (a-b).abs().max() < eps
+    return np.abs((a-b)).max() < eps
 
 def compute_mlp_correct(prompt, track_layers):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -42,7 +45,7 @@ def compute_mlp_correct(prompt, track_layers):
                 next_tensor = output.hidden_states[i][layer]
                 tensors.append(next_tensor)
             tensors = torch.cat(tensors, dim=1)
-            corrects[f"layer_{layer}"][key] = to_numpy(tensors)
+            corrects[f"layer_{layer}"][key] = to_numpy(tensors)[0]
     hidden_states = read_hidden_states(model.probe_hidden_output)
     model.probe_reset_hidden_output()
     return corrects, hidden_states
@@ -57,6 +60,7 @@ class TestHiddenStates(unittest.TestCase):
             corrects, hidden_states = compute_mlp_correct(prompt, track_layers)
             for key in corrects:
                 for subkey in corrects[key]:
+                    self.assertTrue(shape_equal(corrects[key][subkey], hidden_states[key][subkey]))
                     self.assertTrue(array_equal(corrects[key][subkey], hidden_states[key][subkey]))
 
 
