@@ -11,7 +11,7 @@ def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_
     config.track_attention = track_attention
     config.track_projection = track_projection
     for element in track_layers:
-         assert element < config.num_hidden_layers
+         assert 0<= element < config.num_hidden_layers+1
     return
           
 
@@ -94,7 +94,9 @@ def load_hidden_states(filename):
 def alt_save_hidden_states(obj, folder, end_idx, exists_ok=False):
     os.makedirs(folder, exist_ok=exists_ok)
     for i in range(len(obj)):
-        os.makedirs(f"{folder}/{end_idx - i}")
+        if os.path.exist(f"{folder}/{end_idx - i}") and exists_ok:
+            warnings.warn(f"Folder {folder}/{end_idx - i} already exists. Overwriting")
+        os.makedirs(f"{folder}/{end_idx - i}", exist_ok=exists_ok)
         layer_keys = list(obj[i].keys())
         for layer_key in layer_keys:
             os.makedirs(f"{folder}/{end_idx - i}/{layer_key}", exist_ok=exists_ok)
@@ -132,7 +134,7 @@ def numpy_state_processor(x, task_offset=0, strategy="last"):
     return np.array(array)
 
 
-def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=numpy_state_processor, ret_numpy=True, include_files=None, exclude_files=None, task_offset=0, exclude_layers=[], exclude_hidden=[], strategy="last"):
+def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=numpy_state_processor, include_files=None, exclude_files=None, task_offset=0, exclude_layers=[], exclude_hidden=[], strategy="last"):
     files = os.listdir(filepath)
     files = sorted([int(file) for file in files])
     all_files = files
@@ -152,7 +154,7 @@ def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=
     if include_files is not None or exclude_files is not None:
         files = sorted(files)
     hidden_states_list = load_as_dict(files, filepath, state_processor, task_offset=task_offset, exclude_layers=exclude_layers, exclude_hidden=exclude_hidden, strategy=strategy)
-    if ret_numpy:
+    if state_processor in [numpy_state_processor]:
         return np.array(hidden_states_list), files
     else:
         return hidden_states_list, files
