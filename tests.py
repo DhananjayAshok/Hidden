@@ -18,6 +18,17 @@ eps = 1e-5
 def to_numpy(tensor):
     return tensor.detach().cpu().numpy()
 
+def diagnostic_difference(a, b):
+    print(f"{a.shape}, {b.shape}")
+    print(f"Mean Comparison: {a.mean()}, {b.mean()}")
+    print(f"Max Comparison: {a.max()}, {b.max()}")
+    print(f"Min Comparison: {a.min()}, {b.min()}")
+    print(f"Sum Comparison: {a.sum()}, {b.sum()}")
+    print(f"Std Comparison: {np.abs(a-b).max()}")
+    print(f"Mean Diff Comparison: {np.abs(a-b).mean()}")
+    print(f"Max Diff Comparison: {np.abs(a-b).max()}")
+    print(f"Min Diff Comparison: {np.abs(a-b).min()}")
+    print(f"Std Diff Comparison: {np.abs(a-b).std()}")
 
 def shape_equal(a, b):
     return a.shape == b.shape
@@ -37,7 +48,7 @@ def compute_mlp_correct(prompt, track_layers):
     # for output.hidden_states[0], the shape of all tensors is (1, inputs.input_ids.shape[1], hidden_size)
     # for all other output.hidden_states[i] the shape is (1, 1, hidden_size)
     corrects = {}
-    for layer in track_layers:
+    for layer in range(len(output.hidden_states[0])):
         corrects[f"layer_{layer}"] = {}
         for key in ["mlp"]:
             tensors = [output.hidden_states[0][layer]]
@@ -58,10 +69,21 @@ class TestHiddenStates(unittest.TestCase):
         for track_layers in track_layers_list:
             prompt = "There is no "
             corrects, hidden_states = compute_mlp_correct(prompt, track_layers)
-            for key in corrects:
-                for subkey in corrects[key]:
-                    self.assertTrue(shape_equal(corrects[key][subkey], hidden_states[key][subkey]))
-                    self.assertTrue(array_equal(corrects[key][subkey], hidden_states[key][subkey]))
+            for hidden_layer in hidden_states:
+                matches = []
+                hidden_array = hidden_states[hidden_layer]["mlp"]
+                for layer in corrects:
+                    correct_array = corrects[layer]["mlp"]
+                    self.assertTrue(shape_equal(correct_array, hidden_array))
+                    matches.append(array_equal(correct_array, hidden_array))
+                    if not array_equal(correct_array, hidden_array):
+                        print(f"Hidden: {hidden_layer} vs Layer: {layer}")
+                        diagnostic_difference(correct_array, hidden_array)
+                self.assertTrue(any(matches))
+                self.assertTrue(matches[hidden_layer])
+        return
+
+
 
 
 if __name__ == "__main__":
