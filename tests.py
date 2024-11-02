@@ -133,7 +133,7 @@ class TestDataFunctions(unittest.TestCase):
     def basic_test(self, df):
         for column in ["idx", "text"]:
             self.assertTrue(column in df.columns)
-        either = "label" in df.columns or "gold" in df.columns
+        either = "label" in df.columns or "gold" in df.columns or "prompt_only" in df.columns
         self.assertTrue(either)
         return
     
@@ -141,7 +141,7 @@ class TestDataFunctions(unittest.TestCase):
         self.assertTrue(set(a.columns) == set(b.columns))
         self.assertTrue(len(a) == len(b))
         for column in a.columns:
-            if not (a[column] == b[column]).all():
+            if (a[column] != b[column]).any():
                 return False
         return True
 
@@ -155,8 +155,8 @@ class TestDataFunctions(unittest.TestCase):
                      unanswtask.setupselfaware, unanswtask.setupsquad, unanswtask.setupknown_unknown, 
                      confidencetask.setupmmlu]
         for setup_fn in setup_fns:
-            train, test, dataset_name = setup_fn(save=False)
-            print(f"Dataset: {dataset_name}")
+            print(f"Processing: {setup_fn.__name__}")
+            train, test = setup_fn(save=False)
             self.basic_test(train)
             self.basic_test(test)
         return

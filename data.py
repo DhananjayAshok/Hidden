@@ -98,6 +98,7 @@ def process_real_toxicity_prompts(save=True, random_seed=42):
     df = ds["train"].to_pandas().sample(frac=0.2, random_state=random_seed).reset_index(drop=True)
     df["text"] = df["prompt"].apply(lambda x: x["text"])
     df = df[["text", "challenging"]]
+    df["prompt_only"] = True
     df = df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
     train = df.loc[:int(len(df) * 0.8)]
     valid = df.loc[int(len(df) * 0.8):].reset_index(drop=True)
@@ -113,7 +114,8 @@ def process_toxic_chat():
     def proc_df(df):
         df["text"] = df["user_input"]
         df["idx"] = df.index
-        return df[["text", "toxicity", "jailbreaking", "idx"]]
+        df["prompt_only"] = True
+        return df[["text", "toxicity", "jailbreaking", "idx", "prompt_only"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["test"].to_pandas())
     train.to_csv(f"{data_dir}/base/toxic_chat_train.csv", index=False)
