@@ -94,7 +94,7 @@ def load_hidden_states(filename):
 def alt_save_hidden_states(obj, folder, end_idx, exists_ok=False):
     os.makedirs(folder, exist_ok=exists_ok)
     for i in range(len(obj)):
-        if os.path.exist(f"{folder}/{end_idx - i}") and exists_ok:
+        if os.path.exists(f"{folder}/{end_idx - i}") and exists_ok:
             warnings.warn(f"Folder {folder}/{end_idx - i} already exists. Overwriting")
         os.makedirs(f"{folder}/{end_idx - i}", exist_ok=exists_ok)
         layer_keys = list(obj[i].keys())
