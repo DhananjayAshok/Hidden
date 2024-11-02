@@ -146,10 +146,14 @@ class TestDataFunctions(unittest.TestCase):
         return True
 
     def test_setup_data(self):
-        setup_fns = [ToxicityAvoidance.setup_toxic_chat, ToxicityAvoidance.setup_real_toxicity_prompts, 
-                     Jailbreak.setup_toxic_chat, Unanswerable.setuphealthver, Unanswerable.setupqnota, 
-                     Unanswerable.setupselfaware, Unanswerable.setupsquad, Unanswerable.setupknown_unknown, 
-                     Confidence.setupmmlu]
+        toxictask = ToxicityAvoidance()
+        jailbreaktask = Jailbreak()
+        unanswtask = Unanswerable()
+        confidencetask = Confidence()
+        setup_fns = [toxictask.setup_toxic_chat, toxictask.setup_real_toxicity_prompts, 
+                     jailbreaktask.setup_toxic_chat, unanswtask.setuphealthver, unanswtask.setupqnota, 
+                     unanswtask.setupselfaware, unanswtask.setupsquad, unanswtask.setupknown_unknown, 
+                     confidencetask.setupmmlu]
         for setup_fn in setup_fns:
             train, test, dataset_name = setup_fn(save=False)
             print(f"Dataset: {dataset_name}")
@@ -159,7 +163,9 @@ class TestDataFunctions(unittest.TestCase):
     
     def test_randomization(self):
         process_fns = [process_selfaware]
-        setup_fns = [Unanswerable.setupqnota, Unanswerable.setupsquad, Confidence.setupmmlu]
+        unanswerable_task = Unanswerable()
+        confidenc_task = Confidence()
+        setup_fns = [unanswerable_task.setupqnota, unanswerable_task.setupsquad, confidenc_task.setupmmlu]
         for process_fn in process_fns:
             name = process_fn.__name__
             print(f"Processing: {name}")

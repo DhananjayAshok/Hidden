@@ -292,16 +292,20 @@ def process_all():
     process_toxic_chat()
 
 def setup_all():
-    Unanswerable.setuphealthver()
-    Unanswerable.setupselfaware()
-    Unanswerable.setupsquad()
-    Unanswerable.setupqnota()
-    Unanswerable.setupknown_unknown()
-    ToxicityAvoidance.setup_toxic_chat()
-    ToxicityAvoidance.setup_real_toxicity_prompts()
-    Jailbreak.setup_toxic_chat()
-    Jailbreak.setup_toxic_chat()
-    Confidence.setupmmlu()
+    unanswerable = Unanswerable()
+    toxicity = ToxicityAvoidance()
+    jailbreak = Jailbreak()
+    confidence = Confidence()
+    unanswerable.setuphealthver()
+    unanswerable.setupqnota()
+    unanswerable.setupselfaware()
+    unanswerable.setupsquad()
+    unanswerable.setupknown_unknown()
+    confidence.setupmmlu()
+    toxicity.setup_real_toxicity_prompts()
+    toxicity.setup_toxic_chat()
+    jailbreak.setup_toxic_chat()
+    return
 
 
 if __name__ == "__main__":
