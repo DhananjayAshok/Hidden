@@ -16,6 +16,8 @@ import pandas as pd
 
 
 model_name = "meta-llama/Llama-3.1-8B-Instruct"
+model_name = "google/gemma-2-9b-it"
+model_name = "mistralai/Ministral-8B-Instruct-2410"
 tracking_mlp_pre_residual = True
 results_dir=os.environ["RESULTS_DIR"]+model_name.split("/")[-1]+"/tests/"
 if not os.path.exists(results_dir):
