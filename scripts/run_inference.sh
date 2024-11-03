@@ -1,5 +1,5 @@
 task="unanswerable"
-datasets=("squad" "healthver" "qnota" "selfaware" "known_uknown")
+datasets=("squad" "healthver" "qnota" "selfaware" "known_unknown")
 splits=("train" "test")
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 

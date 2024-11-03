@@ -8,7 +8,6 @@ import pickle
 from models import get_model
 from metrics import compute_accuracies
 
-label_map = {"unanswerable": "unanswerable", "confidence": "correct"}
 offset_map = {"unanswerable": 0, "confidence": 5}
 results_dir = os.getenv("RESULTS_DIR")
 data_dir = os.getenv("DATA_DIR")
@@ -33,7 +32,7 @@ def get_xydf(task, dataset, split="train", random_sample=None, exclude_layers=[]
     end_idx = -1
     X, keep_indices = alt_load_hidden_states(f"{hidden_states_dir}/{split}/{dataset}/", start_idx=start_idx, end_idx=end_idx, include_files=indices, exclude_files=exclude_hidden, exclude_layers=exclude_layers, task_offset=task_offset, strategy=strategy)
     df = df.loc[keep_indices].reset_index(drop=True)
-    y = df[label_map[task]].values
+    y = df["label"].values
     return X, y, df
 
 
