@@ -37,6 +37,7 @@ def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, 
     set_tracking_config(config, track_layers=track_layers, track_mlp=track_mlp, track_attention=track_attention, track_projection=track_projection)
     data_df = pd.read_csv(data_path)
     assert "text" in data_df.columns
+    data_df["output"] = None
     model = AutoModelForCausalLM.from_pretrained(model_name, config=config, device_map="auto")
     hidden_states_list = []
     if stop_idx is not None:
@@ -60,10 +61,7 @@ def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, 
         if (i % save_every == 0 and i > 0) or i == stop_idx - 1:
             alt_save_hidden_states(hidden_states_list, output_hidden_dir, i, exists_ok=True)
             hidden_states_list = []
-            if "label" in data_df.columns:
-                data_df[["output", "label"]].to_csv(output_csv_path, index=False)
-            else:
-                data_df[["output"]].to_csv(output_csv_path, index=False)
+            data_df.to_csv(output_csv_path, index=False)
     return 
 
 if __name__ == "__main__":
