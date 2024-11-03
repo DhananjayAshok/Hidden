@@ -13,7 +13,7 @@ results_dir = os.getenv("RESULTS_DIR")
 data_dir = os.getenv("DATA_DIR")
 
 
-def get_xydf(task, dataset, split="train", random_sample=None, exclude_layers=[], exclude_hidden=[], task_offset=0, strategy="last"):
+def get_xydf(task, dataset, split="train", random_sample=None, exclude_layers=[], exclude_hidden=[], task_offset=0, strategy="last", random_seed=42):
     assert split in ["train", "test"]
     hidden_states_dir = f"{results_dir}/{task}/"
     df = pd.read_csv(f"{results_dir}/{task}/{dataset}_{split}_inference.csv")
@@ -26,7 +26,7 @@ def get_xydf(task, dataset, split="train", random_sample=None, exclude_layers=[]
         random_sample = min(random_sample, len(df))
     else:
         random_sample = len(df)
-    df = df.sample(n=random_sample)
+    df = df.sample(n=random_sample, random_state=random_seed)
     indices = list(df.index)
     start_idx = -2
     end_idx = -1
@@ -68,8 +68,8 @@ def main(task, dataset, prediction_dir, random_sample_train, random_sample_test,
         if not os.path.exists(prediction_dir):
             os.makedirs(prediction_dir)
     task_offset = offset_map[task] if use_task_offset else 0
-    X_train, y_train, train_df = get_xydf(task, dataset, "train", random_sample_train, exclude_layers, exclude_hidden, task_offset=task_offset, strategy=strategy)
-    X_test, y_test, test_df = get_xydf(task, dataset, "test", random_sample_test, exclude_layers, exclude_hidden, task_offset=task_offset, strategy=strategy)
+    X_train, y_train, train_df = get_xydf(task, dataset, "train", random_sample_train, exclude_layers, exclude_hidden, task_offset=task_offset, strategy=strategy, random_seed=random_seed)
+    X_test, y_test, test_df = get_xydf(task, dataset, "test", random_sample_test, exclude_layers, exclude_hidden, task_offset=task_offset, strategy=strategy, random_seed=random_seed)
     model = get_model(model_kind)
     train_pred, test_pred = do_model_fit(model, X_train, y_train, X_test, y_test)
     if prediction_dir is not None:

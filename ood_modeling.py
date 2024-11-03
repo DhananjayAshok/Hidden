@@ -8,8 +8,7 @@ import pickle
 from models import get_model
 from iid_modeling import get_xydf, do_model_fit
 
-label_map = {"unanswerable": "unanswerable", "confidence": "correct"}
-task_datasets = {"unanswerable": ["squad", "qnota", "selfaware", "healthver"], "toxicity_avoidance": ["real_toxicity_prompts", "toxic_chat"]}
+task_datasets = {"unanswerable": ["qnota", "selfaware", "known_known"], "toxicity_avoidance": ["real_toxicity_prompts", "toxic_chat"]}
 results_dir = os.getenv("RESULTS_DIR")
 data_dir = os.getenv("DATA_DIR")
 
@@ -29,8 +28,8 @@ def main(task, dataset, prediction_dir, random_sample_train_per, random_sample_t
     
     data = {}
     for dataset in task_datasets[task]:
-        X_train, y_train, train_df = get_xydf(task, dataset, "train", random_sample_train_per)
-        X_test, y_test, test_df = get_xydf(task, dataset, "test", random_sample_test_per)
+        X_train, y_train, train_df = get_xydf(task, dataset, "train", random_sample_train_per, random_seed=random_seed)
+        X_test, y_test, test_df = get_xydf(task, dataset, "test", random_sample_test_per, random_seed=random_seed)
         internal_data = {"X_train": X_train, "y_train": y_train, "train_df": train_df, "X_test": X_test, "y_test": y_test, "test_df": test_df}
         data[dataset] = internal_data        
     
