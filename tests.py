@@ -17,7 +17,7 @@ import pandas as pd
 
 model_name = "meta-llama/Llama-3.1-8B-Instruct"
 tracking_mlp_pre_residual = True
-results_dir=os.environ["RESULTS_DIR"]+"/tests"
+results_dir=os.environ["RESULTS_DIR"]+model_name.split("/")[-1]+"/tests/"
 if not os.path.exists(results_dir):
     os.makedirs(results_dir+"/train/testing")
     os.makedirs(results_dir+"/test/testing")
