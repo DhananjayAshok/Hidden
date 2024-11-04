@@ -3,11 +3,11 @@ declare -A tasks_and_datasets=(
 )
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 random_seed=42
-random_sample_train=1000
-random_sample_test=1000
+random_sample_train=2000
+random_sample_test=2000
 
 source proj_params.sh
-model_save_name=extracted_name="${model_name#*/}"
+model_save_name="${model_name#*/}"
 for task in "${!tasks_and_datasets[@]}"
 do
     datasets=${tasks_and_datasets[$task]}

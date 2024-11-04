@@ -7,7 +7,7 @@ model_name="meta-llama/Llama-3.1-8B-Instruct"
 
 declare -A max_new_token_dict=( ["confidence"]=5 ["unanswerable"]=1 ["toxicity_avoidance"]=20)
 source proj_params.sh
-model_save_name=extracted_name="${model_name#*/}"
+model_save_name="${model_name#*/}"
 for dataset in "${datasets[@]}"
 do
     for split in "${splits[@]}"

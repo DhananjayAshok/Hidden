@@ -1,10 +1,11 @@
 tasks=("unanswerable")
 random_seed=42
-random_sample_train_per=2000
+model_name="meta-llama/Llama-3.1-8B-Instruct"
+random_sample_train_per=200
 random_sample_test_per=2000
 
 source proj_params.sh
-
+model_save_name="${model_name#*/}"
 for task in "${tasks[@]}"
 do
     prediction_dir=$RESULTS_DIR/$model_save_name/$task/predictions/ood/
