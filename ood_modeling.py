@@ -35,7 +35,8 @@ def main(task, prediction_dir, model_save_name, random_sample_train_per, random_
     for dataset in data:
         print(f"Fitting model for test: {dataset}")
         model = get_model(model_kind)
-        train_pred, test_pred, train_df, test_df = fit_one_set(model, data, dataset)
+        train_pred, test_pred, train_df, test_df, test_acc = fit_one_set(model, data, dataset)
+        print(f"Final Test Accuracy for {dataset}: {test_acc}")
         del model
     return
     
@@ -47,8 +48,8 @@ def fit_one_set(model, data, test_dataset): # TODO: Must debug this
     X_test = data[test_dataset]["X_test"]
     y_test = data[test_dataset]["y_test"]
     test_df = data[test_dataset]["test_df"]
-    train_pred, test_pred = do_model_fit(model, X_train, y_train, X_test, y_test)
-    return train_pred, test_pred, train_df, test_df
+    train_pred, test_pred, test_acc = do_model_fit(model, X_train, y_train, X_test, y_test)
+    return train_pred, test_pred, train_df, test_df, test_acc
     
 
 if __name__ == "__main__":

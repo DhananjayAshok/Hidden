@@ -50,7 +50,9 @@ def do_model_fit(model, X_train, y_train, X_test, y_test):
     print(f"Base rate: {y_train.mean()} (Train), {y_test.mean()} (Test)")
     for i in range(0, len(train_thresholds), 10):
         print(f"Threshold: {train_thresholds[i]}| Train Accuracy: {train_scores[i]}| Test Accuracy: {test_scores[i]}")
-    return train_pred, test_pred
+    around_50 = np.argmin(np.abs(np.array(train_thresholds) - 0.5))
+    test_acc = test_scores[around_50]
+    return train_pred, test_pred, test_acc
 
 @click.command()
 @click.option("--task", type=str, required=True)
@@ -74,7 +76,8 @@ def main(task, dataset, model_save_name, prediction_dir, random_sample_train, ra
     X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train, exclude_layers, exclude_hidden, task_offset=task_offset, strategy=strategy, random_seed=random_seed)
     X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test, exclude_layers, exclude_hidden, task_offset=task_offset, strategy=strategy, random_seed=random_seed)
     model = get_model(model_kind)
-    train_pred, test_pred = do_model_fit(model, X_train, y_train, X_test, y_test)
+    train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test)
+    print(f"Final Test Accuracy: {test_accuracy}")
     if prediction_dir is not None:
         train_df["probe_prediction"] = train_pred
         test_df["probe_prediction"] = test_pred
