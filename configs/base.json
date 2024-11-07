@@ -1,47 +1,10 @@
 [
     {
         "use_layers": [2, 15, 30], 
-        "use_hidden": ["mlp", "attention", "projection"],
+        "use_hidden": ["mlp", "attention"],
         "strategy": "last", 
         "use_task_offset": false
     }, 
-    {
-        "use_layers": [2, 15, 30], 
-        "use_hidden": ["mlp", "attention", "projection"],
-        "strategy": "last", 
-        "use_task_offset": true
-    }, 
-    {
-        "use_layers": [2, 15, 30], 
-        "use_hidden": ["mlp", "attention", "projection"],
-        "strategy": "mean", 
-        "use_task_offset": false
-    }, 
-    {
-        "use_layers": [2], 
-        "use_hidden": ["mlp", "attention", "projection"],
-        "strategy": "last", 
-        "use_task_offset": false
-    }, 
-    {
-        "use_layers": [15], 
-        "use_hidden": ["mlp", "attention", "projection"],
-        "strategy": "last", 
-        "use_task_offset": false
-    }, 
-    {
-        "use_layers": [30], 
-        "use_hidden": ["mlp", "attention", "projection"],
-        "strategy": "last", 
-        "use_task_offset": false
-    }, 
-
-    {
-        "use_layers": [2, 15], 
-        "use_hidden": ["mlp", "attention", "projection"],
-        "strategy": "last", 
-        "use_task_offset": false
-    },
 
     {
         "use_layers": [2, 15, 30], 
@@ -49,7 +12,7 @@
         "strategy": "last", 
         "use_task_offset": false
     }, 
-
+    
     {
         "use_layers": [2, 15, 30], 
         "use_hidden": ["attention"],
@@ -58,29 +21,33 @@
     }, 
 
     {
-        "use_layers": [2, 15, 30], 
-        "use_hidden": ["projection"],
+        "use_layers": [2], 
+        "use_hidden": ["mlp", "attention"],
         "strategy": "last", 
         "use_task_offset": false
     }, 
-
     {
-        "use_layers": [2, 15, 30], 
+        "use_layers": [15], 
+        "use_hidden": ["mlp", "attention"],
+        "strategy": "last", 
+        "use_task_offset": false
+    }, 
+    {
+        "use_layers": [30], 
         "use_hidden": ["mlp", "attention"],
         "strategy": "last", 
         "use_task_offset": false
     }, 
 
     {
-        "use_layers": [2, 15, 30], 
-        "use_hidden": ["mlp", "projection"],
+        "use_layers": [2, 15], 
+        "use_hidden": ["mlp", "attention"],
         "strategy": "last", 
         "use_task_offset": false
     }, 
-
     {
-        "use_layers": [2, 15, 30], 
-        "use_hidden": ["attention", "projection"],
+        "use_layers": [15, 30], 
+        "use_hidden": ["mlp", "attention"],
         "strategy": "last", 
         "use_task_offset": false
     }

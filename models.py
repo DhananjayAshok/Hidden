@@ -186,39 +186,22 @@ def get_model_suite(suite_name):
     models = {}
     if suite_name == "linear":
         models["linear-pure"] = Linear(penalty="l2")
-        for penalty in ["l1", "l2", "elasticnet"]:
-            for C in [0.25, 0.5, 1.0, 2.0]:
-                model = Linear(penalty=penalty, C=C, solver="saga")
-                models[model.name] = model
 
     elif suite_name == "tree":
-        for n_estimators in [10, 50, 100, 200]:
-            for max_depth in [None, 10, 20, 50]:
-                model = RandomForest(n_estimators=n_estimators, max_depth=max_depth)
-                models[model.name] = model
+        model = RandomForest(n_estimators=100, max_depth=50)
+        models[model.name] = model
 
     elif suite_name == "mlp":
-        for hidden_layer_sizes in [(100,), (500,), (1000,), (5000,)]:
-            for activation in ["relu", "tanh"]:
-                for solver in ["adam", "sgd"]:
-                    for lr in [0.001, 0.01]:
+        for hidden_layer_sizes in [(1000,)]:
+            for activation in ["relu"]:
+                for solver in ["sgd"]:
+                    for lr in [0.001]:
                         model = MLP(hidden_layer_sizes=hidden_layer_sizes, activation=activation, solver=solver, lr=lr)
                         models[model.name] = model
 
     else:
-        models["linear-pure"] = Linear(penalty="l2")
-        for penalty in ["l2"]:
-            for C in [0.5, 1.0]:
-                model = Linear(penalty=penalty, C=C)
-                models[model.name] = model
-        for n_estimators in [50]:
-            for max_depth in [10, 20]:
-                model = RandomForest(n_estimators=n_estimators, max_depth=max_depth)
-                models[model.name] = model
-        for hidden_layer_sizes in [(5000, 10_000)]:
-            for activation in ["relu"]:
-                for solver in ["adam", "sgd"]:
-                    for lr in [0.001, 0.01]:
-                        model = MLP(hidden_layer_sizes=hidden_layer_sizes, activation=activation, solver=solver, lr=lr)
-                        models[model.name] = model
+        # have all  of the above
+        models.update(get_model_suite("linear"))
+        models.update(get_model_suite("tree"))
+        models.update(get_model_suite("mlp"))        
     return models

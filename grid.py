@@ -78,7 +78,7 @@ def do_fold_fit(X_all, y_all, model, n_fold):
 @click.option('--random_seed', type=int, default=42)
 @click.option('--report_path', type=str, default="reports/")
 @click.option('--config_path', type=str, default="configs/base.json")
-@click.option('--suite_name', type=click.Choice(['base', 'linear', 'tree'], case_sensitive=False), default="base")
+@click.option('--suite_name', type=click.Choice(['base', 'linear', 'tree'], case_sensitive=False), default="linear")
 def main(task, dataset, model_save_name, n_samples, n_fold, random_seed, report_path, config_path, suite_name):
     if not os.path.exists(report_path):
         os.makedirs(report_path)

@@ -15,7 +15,8 @@ from prompt_engines import get_prompt_engine
 @click.option("--output_column", type=str, default="label")
 @click.option("--use_prompt", type=bool, default=False)
 @click.option("--overwrite", type=bool, default=False)
-def main(file, metric_name, prompt_column, generation_column, reference_column, output_column, use_prompt, overwrite):
+@click.option('--binarize_threshold', type=float, default=0.5)
+def main(file, metric_name, prompt_column, generation_column, reference_column, output_column, use_prompt, overwrite, binarize_threshold):
     if reference_column == "none":
         reference_column = None
     df = pd.read_csv(file)
@@ -32,13 +33,16 @@ def main(file, metric_name, prompt_column, generation_column, reference_column, 
     if use_prompt:
         to_score = df[prompt_column] + " " + to_score
     metric = get_metric_class(metric_name)
-    for i in range(len(df)):
+    for i in tqdm(range(len(df))):
         if not isinstance(to_score[i], str):
             continue
         input_text = to_score[i]
         label = labels[i]
         output = metric(input_text, label)
         df.loc[i, output_column] = output
+    if df[output_column].dtype == "float":
+        df[f"{output_column}_cts"] = df[output_column]
+        df[output_column] = df[output_column] > binarize_threshold
     df.to_csv(file, index=False)
 
 
