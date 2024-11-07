@@ -13,7 +13,7 @@ results_dir = os.getenv("RESULTS_DIR")
 data_dir = os.getenv("DATA_DIR")
 
 
-def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, exclude_layers=[], exclude_hidden=[], task_offset=0, strategy="last", random_seed=42):
+def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, task_offset=0, random_seed=42):
     assert split in ["train", "test"]
     hidden_states_dir = f"{results_dir}/{model_save_name}/{task}/"
     df = pd.read_csv(f"{results_dir}/{model_save_name}/{task}/{dataset}_{split}_inference.csv")
@@ -32,7 +32,7 @@ def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, 
     indices = list(df.index)
     start_idx = -2
     end_idx = -1
-    X, keep_indices = alt_load_hidden_states(f"{hidden_states_dir}/{split}/{dataset}/", start_idx=start_idx, end_idx=end_idx, include_files=indices, exclude_files=exclude_hidden, exclude_layers=exclude_layers, task_offset=task_offset, strategy=strategy)
+    X, keep_indices = alt_load_hidden_states(f"{hidden_states_dir}/{split}/{dataset}/", start_idx=start_idx, end_idx=end_idx, include_files=indices, task_offset=task_offset)
     df = df.loc[keep_indices].reset_index(drop=True)
     y = df["label"].values
     return X, y, df
@@ -63,18 +63,14 @@ def do_model_fit(model, X_train, y_train, X_test, y_test):
 @click.option('--random_sample_test', type=int, default=None)
 @click.option('--random_seed', type=int, default=42)
 @click.option('--model_kind', type=click.Choice(['linear', 'mlp', 'transformer'], case_sensitive=False), default="linear")
-@click.option("--exclude_layers", multiple=True, default=[])
-@click.option("--exclude_hidden", multiple=True, default=[])
-@click.option('--use_task_offset', type=bool, default=False)
-@click.option('--strategy', type=str, default="last")
-def main(task, dataset, model_save_name, prediction_dir, random_sample_train, random_sample_test, random_seed, model_kind, exclude_layers, exclude_hidden, use_task_offset, strategy):
+def main(task, dataset, model_save_name, prediction_dir, random_sample_train, random_sample_test, random_seed, model_kind):
     np.random.seed(random_seed)
     if prediction_dir is not None:
         if not os.path.exists(prediction_dir):
             os.makedirs(prediction_dir)
-    task_offset = offset_map[task] if use_task_offset else 0
-    X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train, exclude_layers, exclude_hidden, task_offset=task_offset, strategy=strategy, random_seed=random_seed)
-    X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test, exclude_layers, exclude_hidden, task_offset=task_offset, strategy=strategy, random_seed=random_seed)
+    task_offset = offset_map[task] if False else 0
+    X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train, task_offset=task_offset, random_seed=random_seed)
+    X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test, task_offset=task_offset, random_seed=random_seed)
     model = get_model(model_kind)
     train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test)
     print(f"Final Test Accuracy: {test_accuracy}")

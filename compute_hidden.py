@@ -116,15 +116,19 @@ def null_state_processor(x, task_offset=0, strategy="last"):
     return x
 
 
-def numpy_state_processor(x, task_offset=0, strategy="last"):
+def numpy_state_processor(x, task_offset=0, strategy="last", use_layers=None, use_hidden=None):
     array = []
     layers = list(x.keys())
     layer_numbers = [int(layer.split("_")[1]) for layer in layers]
     layer_argsort = np.argsort(layer_numbers)
     layers = [layers[i] for i in layer_argsort]
+    if use_layers is not None:
+        layers = [layer for layer in layers if layer in use_layers]
     for layer_key in layers:
         hidden_keys = list(x[layer_key].keys())
         hidden_keys = sorted(hidden_keys)
+        if use_hidden is not None:
+            hidden_keys = [hidden_key for hidden_key in hidden_keys if hidden_key in use_hidden]
         for hidden_key in hidden_keys:
             if hidden_key == "projection":
                 array.extend(x[layer_key][hidden_key][-(1+task_offset):])
@@ -162,6 +166,7 @@ def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=
         return np.array(hidden_states_list), files
     else:
         return hidden_states_list, files
+    
 
 
 def load_as_dict(files, filepath, state_processor, task_offset, exclude_layers, exclude_hidden, strategy):
