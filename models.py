@@ -188,7 +188,7 @@ def get_model_suite(suite_name):
         models["linear-pure"] = Linear(penalty="l2")
         for penalty in ["l1", "l2", "elasticnet"]:
             for C in [0.25, 0.5, 1.0, 2.0]:
-                model = Linear(penalty=penalty, C=C)
+                model = Linear(penalty=penalty, C=C, solver="saga")
                 models[model.name] = model
 
     elif suite_name == "tree":

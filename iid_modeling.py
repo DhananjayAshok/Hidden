@@ -38,7 +38,7 @@ def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, 
     return X, y, df
 
 
-def do_model_fit(model, X_train, y_train, X_test, y_test):
+def do_model_fit(model, X_train, y_train, X_test, y_test, verbose=True):
     model.fit(X_train, y_train)
     train_pred = model.predict_proba(X_train)
     test_pred = model.predict_proba(X_test)
@@ -52,7 +52,8 @@ def do_model_fit(model, X_train, y_train, X_test, y_test):
     #    print(f"Threshold: {train_thresholds[i]}| Train Accuracy: {train_scores[i]}| Test Accuracy: {test_scores[i]}")
     around_50 = np.argmin(np.abs(np.array(train_thresholds) - 0.5))
     test_acc = test_scores[around_50]
-    print(f"Final Test Accuracy: {test_acc}")
+    if verbose:
+        print(f"Final Test Accuracy: {test_acc}")
     return train_pred, test_pred, test_acc
 
 @click.command()

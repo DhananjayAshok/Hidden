@@ -62,7 +62,7 @@ def do_fold_fit(X_all, y_all, model, n_fold):
         y_train = np.concatenate([y_all[:i * fold_size], y_all[(i + 1) * fold_size:]], axis=0)
         X_test = X_all[i * fold_size:(i + 1) * fold_size]
         y_test = y_all[i * fold_size:(i + 1) * fold_size]
-        train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test)
+        train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test, verbose=False)
         fold_accs.append(test_accuracy)
     arr = np.array(fold_accs)
     return arr.mean(), arr.std()
@@ -91,6 +91,7 @@ def main(task, dataset, model_save_name, n_samples, n_fold, random_seed, report_
     with open(config_path, "r") as f:
         configs = json.load(f)
     X_pre, y_all, df = get_xyall(task, dataset, model_save_name, n_samples, random_seed)
+    print(f"Base Rate: {y_all.mean()}")
     for config in tqdm(configs):
         print(f"Config: {config}")
         X_all = get_config_X(X_pre, config, task)
