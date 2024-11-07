@@ -64,14 +64,17 @@ def read_hidden_states(probe_hidden_output):
               ret[f"layer_{layer}"][key] = torch.cat(ret[f"layer_{layer}"][key], dim=1)[0].numpy() # batch size is always 0
     return ret     
 
+
 def to_numpy(hidden_states):
      for layer in hidden_states.keys():
           for key in hidden_states[layer].keys():
                hidden_states[layer][key] = hidden_states[layer][key].numpy()
 
+
 def to_numpy_list(hidden_states_list):
     for i in range(len(hidden_states_list)):
         to_numpy(hidden_states_list[i])
+
 
 def deepcopy(hidden_states):
     ret = {}
@@ -117,6 +120,7 @@ def null_state_processor(x, task_offset=0, strategy="last"):
 
 
 def numpy_state_processor(x, task_offset=0, strategy="last", use_layers=None, use_hidden=None):
+    use_layers = ["layer_"+ str(layer) for layer in use_layers] if use_layers is not None else None
     array = []
     layers = list(x.keys())
     layer_numbers = [int(layer.split("_")[1]) for layer in layers]
@@ -137,6 +141,8 @@ def numpy_state_processor(x, task_offset=0, strategy="last", use_layers=None, us
                     array.extend(x[layer_key][hidden_key][-(1+ task_offset)])
                 elif strategy == "mean":
                     array.extend(np.mean(x[layer_key][hidden_key], axis=0))
+                elif strategy == "none":
+                    array.extend(x[layer_key][hidden_key])
                 else:
                     raise ValueError(f"Strategy {strategy} not implemented")
     return np.array(array)
@@ -162,7 +168,7 @@ def alt_load_hidden_states(filepath, start_idx=0, end_idx=None, state_processor=
     if include_files is not None or exclude_files is not None:
         files = sorted(files)
     hidden_states_list = load_as_dict(files, filepath, state_processor, task_offset=task_offset, exclude_layers=exclude_layers, exclude_hidden=exclude_hidden, strategy=strategy)
-    if state_processor in [numpy_state_processor]:
+    if state_processor in [numpy_state_processor] and strategy != "none":
         return np.array(hidden_states_list), files
     else:
         return hidden_states_list, files

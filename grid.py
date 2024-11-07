@@ -40,7 +40,7 @@ def get_xyall(task, dataset, model_save_name, random_sample=None, random_seed=42
     return X, y, df
 
 
-def get_config_X(X, config):
+def get_config_X(X, config, task):
     task_offset = offset_map[task] if config['use_task_offset'] else 0
     # remove task_offset from config
     new_config = config.copy()
@@ -93,7 +93,7 @@ def main(task, dataset, model_save_name, n_samples, n_fold, random_seed, report_
     X_pre, y_all, df = get_xyall(task, dataset, model_save_name, n_samples, random_seed)
     for config in tqdm(configs):
         print(f"Config: {config}")
-        X_all = get_config_X(X_pre, config)
+        X_all = get_config_X(X_pre, config, task)
         model_suite = get_model_suite(suite_name)
         for model_name in model_suite:
             model = model_suite[model_name]
