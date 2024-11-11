@@ -17,12 +17,15 @@ import os
 @click.option("--max_new_tokens", type=int, default=10)
 @click.option("--stop_strings", type=str, default="[STOP]")
 @click.option("--remove_stop_strings", type=bool, default=True)
-@click.option("--track_layers", type=str, default="2,15,30")
+@click.option("--track_layers", type=str, default="none")
 @click.option("--track_mlp", type=bool, default=True)
 @click.option("--track_attention", type=bool, default=True)
-@click.option("--track_projection", type=bool, default=True)
+@click.option("--track_projection", type=bool, default=False)
 def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, start_idx, stop_idx, max_new_tokens, stop_strings, remove_stop_strings, track_layers, track_mlp, track_attention, track_projection):
-    track_layers = [int(x) for x in track_layers.split(",")]
+    if track_layers == "none":
+        track_layers = None
+    else:
+        track_layers = [int(x) for x in track_layers.split(",")]
     stop_strings = stop_strings.split(",")
     makedirs = [output_hidden_dir]
     for output_path in [output_csv_path]:
@@ -34,6 +37,9 @@ def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
     config = AutoConfig.from_pretrained(model_name)
+    if track_layers is None:
+        num_hidden = config.num_hidden_layers
+        track_layers = [int(0.65*num_hidden)]
     set_tracking_config(config, track_layers=track_layers, track_mlp=track_mlp, track_attention=track_attention, track_projection=track_projection)
     data_df = pd.read_csv(data_path)
     assert "text" in data_df.columns
