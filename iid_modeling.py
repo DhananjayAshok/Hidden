@@ -47,12 +47,12 @@ def do_model_fit(model, X_train, y_train, X_test, y_test, verbose=True):
     #for i in range(len(train_scores)):
     #    train_scores[i] = int(train_scores[i] * 10000) / 100
     #    test_scores[i] = int(test_scores[i] * 10000) / 100
-    #print(f"Base rate: {y_train.mean()} (Train), {y_test.mean()} (Test)")
     #for i in range(0, len(train_thresholds), 10):
     #    print(f"Threshold: {train_thresholds[i]}| Train Accuracy: {train_scores[i]}| Test Accuracy: {test_scores[i]}")
     around_50 = np.argmin(np.abs(np.array(train_thresholds) - 0.5))
     test_acc = test_scores[around_50]
     if verbose:
+        print(f"Base rate: {y_train.mean()} (Train), {y_test.mean()} (Test)")
         print(f"Final Test Accuracy: {test_acc}")
     return train_pred, test_pred, test_acc
 

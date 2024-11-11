@@ -1,4 +1,4 @@
-datasets=("real_toxicity_prompt" "toxic_chat")
+datasets=("real_toxicity_prompts" "toxic_chat")
 task="toxicity_avoidance"
 metric_name="toxdectroberta"
 model_name="meta-llama/Llama-3.1-8B-Instruct"
@@ -13,6 +13,7 @@ source proj_params.sh
 model_name="${model_name#*/}"
 
 for dataset in "${datasets[@]}"
+do
     for split in "${splits[@]}"
     do
 
