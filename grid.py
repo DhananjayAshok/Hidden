@@ -68,6 +68,10 @@ def do_fold_fit(X_all, y_all, model, n_fold):
         y_train = np.concatenate([y_all[:i * fold_size], y_all[(i + 1) * fold_size:]], axis=0)
         X_test = X_all[i * fold_size:(i + 1) * fold_size]
         y_test = y_all[i * fold_size:(i + 1) * fold_size]
+        for arr in [y_train, y_test]:
+            if len(np.unique(arr)) == 1:
+                print(f"Only one class in fold {i}. Skipping ...") # Will likely be a problem for all splits
+                return None, None
         train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test, verbose=False)
         fold_accs.append(test_accuracy)
     arr = np.array(fold_accs)
