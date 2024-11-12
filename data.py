@@ -817,7 +817,7 @@ class Sentiment:
             save_dfs(train, valid, name, self.taskname+prompt_task)
         return train, valid
     
-    def setupamazonreviews(self, save=True, prompt_task=None):
+    def setup_amazonreviews(self, save=True, prompt_task=None):
         return self.setupstandard("amazonreviews", save, prompt_task)
     
     def setupyelp(self, save=True, prompt_task=None):
@@ -957,7 +957,7 @@ class Confidence:
             save_dfs(train, valid, name, self.taskname+savename)
         return train, valid
 
-    def setupmmlu(self, k=2, save=True, random_seed=42):
+    def setup_mmlu(self, k=2, save=True, random_seed=42):
         train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subset", save=False, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subset", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
@@ -1058,7 +1058,7 @@ def process_batch(batch_nos):
 
 
 def process_all():
-    process_batch([0, 1])
+    process_batch([0, 1, 2])
     return
 
 
@@ -1075,7 +1075,6 @@ def setup_batch(batch_nos):
         unanswerable.setupselfaware()
         unanswerable.setupsquad()
         unanswerable.setupknown_unknown()
-        confidence.setupmmlu()
         toxicity.setup_real_toxicity_prompts()
         toxicity.setup_toxic_chat()
         jailbreak.setup_toxic_chat()
@@ -1085,7 +1084,7 @@ def setup_batch(batch_nos):
             news_topic.setupbbcnews(prompt_task=key)
             news_topic.setupnytimes(prompt_task=key)
         for key in sentiment.prompt_task_dict:
-            sentiment.setupamazonreviews(prompt_task=key)
+            sentiment.setup_amazonreviews(prompt_task=key)
             sentiment.setupyelp(prompt_task=key)
             sentiment.setuptwitterfinance(prompt_task=key)
             sentiment.setuptwittermteb(prompt_task=key)
@@ -1097,17 +1096,28 @@ def setup_batch(batch_nos):
             sentiment.setupfinancial_phrasebank(prompt_task=key)
             sentiment.setupdair_emotion(prompt_task=key)
             sentiment.setup_sst5(prompt_task=key)
+    if 2 in batch_nos:
+        confidence.setup_mmlu()
+        confidence.setup_cosmoqa()
+        confidence.setup_piqa()
+        confidence.setup_arc()
+        confidence.setup_medmcqa()
+        confidence.setup_commonsenseqa()
+        confidence.setup_openbookqa()
+        confidence.setup_qasc()
+        confidence.setup_hellaswag()
+        confidence.setup_bigbenchhard()
 
 
 
 
 
 def setup_all():
-    setup_batch([0, 1])
+    setup_batch([0, 1, 2])
     return
 
 
 
 if __name__ == "__main__":
-    process_batch([1])
-    setup_batch([1])
+    process_batch([2])
+    setup_batch([2])
