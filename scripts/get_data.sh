@@ -23,3 +23,6 @@ wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/m
 wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/unmeasurable_questions.json
 wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/incorrect_questions.json
 
+cd nytimes
+wget https://raw.githubusercontent.com/billywzh717/N24News/refs/heads/main/nytimes_dataset.json
+

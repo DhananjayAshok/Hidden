@@ -4,12 +4,12 @@ import numpy as np
 from compute_hidden import alt_load_hidden_states, null_state_processor, numpy_state_processor
 import os
 import warnings
-import pickle
+import traceback
 from models import get_model_suite
 from iid_modeling import do_model_fit, offset_map
 from tqdm import tqdm
 import json
-
+warnings.filterwarnings("ignore")
 
 results_dir = os.getenv("RESULTS_DIR")
 data_dir = os.getenv("DATA_DIR")
@@ -41,12 +41,18 @@ def get_xyall(task, dataset, model_save_name, random_sample=None, random_seed=42
 
 
 def get_config_X(X, config, task):
-    task_offset = offset_map[task] if config['use_task_offset'] else 0
-    # remove task_offset from config
+    task_offset = offset_map[task] if config.get('use_task_offset', False) else 0
+    n_train = int(config.get('use_data', 1.0) * len(X))
     new_config = config.copy()
     new_config.pop('use_task_offset', None)
+    new_config.pop('use_data', None)
     X_all = np.array([numpy_state_processor(x, task_offset=task_offset, **new_config) for x in X])
-    return X_all
+    if n_train < len(X_all):
+        keep_index = np.random.choice(len(X_all), n_train, replace=False)
+        X_all = X_all[keep_index]
+    else:
+        keep_index = np.arange(len(X_all))
+    return X_all, keep_index
 
 
 def do_fold_fit(X_all, y_all, model, n_fold):
@@ -80,30 +86,38 @@ def do_fold_fit(X_all, y_all, model, n_fold):
 @click.option('--config_path', type=str, default="configs/base.json")
 @click.option('--suite_name', type=click.Choice(['base', 'linear', 'tree'], case_sensitive=False), default="linear")
 def main(task, dataset, model_save_name, n_samples, n_fold, random_seed, report_path, config_path, suite_name):
+    report_file_name = f"{task}_{dataset}_{n_samples}_{suite_name}_{random_seed}.csv"
+    assert n_fold > 1
     if not os.path.exists(report_path):
         os.makedirs(report_path)
-    if os.path.exists(f"{report_path}/{task}_{dataset}_{random_seed}.csv"):
-        print(f"Report already exists for {task} and {dataset} for random_seed {random_seed}. Skipping...")
+    if os.path.exists(report_file_name):
+        print(f"Report already exists for {task} and {dataset} with {n_samples} samples, suite_name={suite_name}, random_seed={random_seed}. Skipping ...")
         return
     np.random.seed(random_seed)    
-    columns = ["config", "model", "acc_mean", "acc_std"]
+    columns = ["config", "model", "acc_mean", "acc_std", "n_train"]
     data = []
     with open(config_path, "r") as f:
         configs = json.load(f)
-    X_pre, y_all, df = get_xyall(task, dataset, model_save_name, n_samples, random_seed)
-    print(f"Base Rate: {y_all.mean()}")
+    X_pre, y_pre, df = get_xyall(task, dataset, model_save_name, n_samples, random_seed)
+    print(f"Base Rate: {y_pre.mean()}")
     for config in tqdm(configs):
         print(f"Config: {config}")
-        X_all = get_config_X(X_pre, config, task)
+        X_all, keep_index = get_config_X(X_pre, config, task)
+        y_all = y_pre[keep_index]
+        n_points_left = int(config.get('use_data', 1.0) * len(X_pre))
+        points_per_fold = n_points_left // n_fold
+        n_train = points_per_fold * (n_fold - 1)
+        if len(keep_index) < len(X_pre):
+            print(f"Reduced data size from {len(X_pre)} to {len(X_all)}. New base rate: {y_all.mean()}")
         model_suite = get_model_suite(suite_name)
         for model_name in model_suite:
             model = model_suite[model_name]
             acc_mean, acc_std = do_fold_fit(X_all, y_all, model, n_fold)
             print(f"\tModel: {model_name} | Mean: {acc_mean} | Std: {acc_std}")
-            data.append([config, model_name, acc_mean, acc_std])
+            data.append([config, model_name, acc_mean, acc_std, n_train])
         del model_suite, X_all
     df = pd.DataFrame(data, columns=columns)
-    df.to_csv(f"{report_path}/{task}_{dataset}_{random_seed}.csv", index=False)
+    df.to_csv(report_file_name, index=False)
     return
     
 if __name__ == "__main__":
