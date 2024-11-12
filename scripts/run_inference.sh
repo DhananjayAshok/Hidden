@@ -1,11 +1,11 @@
 task="sentiment"
-datasets=("amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5")
+datasets=("amazonreviews" "yelp" "twitterfinance" "twittermteb" "auditorsentiment" "fiqa" "indosentiment" "newsmtc" "imdb" "financial_phrasebank" "dair_emotion" "sst5")
 splits=("train" "test")
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 
 
 
-declare -A max_new_token_dict=( ["confidence"]=5 ["unanswerable"]=1 ["toxicity_avoidance"]=20)
+declare -A max_new_token_dict=( ["confidence"]=5 ["unanswerable"]=1 ["toxicity_avoidance"]=20 ["sentiment"]=1)
 source proj_params.sh
 model_save_name="${model_name#*/}"
 for dataset in "${datasets[@]}"
