@@ -17,7 +17,7 @@ import os
 @click.option("--max_new_tokens", type=int, default=10)
 @click.option("--stop_strings", type=str, default="[STOP]")
 @click.option("--remove_stop_strings", type=bool, default=True)
-@click.option("--track_layers", type=str, default="none")
+@click.option("--track_layers", type=str, default="15")
 @click.option("--track_mlp", type=bool, default=True)
 @click.option("--track_attention", type=bool, default=True)
 @click.option("--track_projection", type=bool, default=False)

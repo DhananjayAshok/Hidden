@@ -12,9 +12,6 @@ def remove_urls(text):
     return cleaned_text
 
 data_dir = os.environ["DATA_DIR"]
-for subdir in ["base", "unanswerable", "confidence", "toxicity_avoidance", "jailbreak"]:
-    if not os.path.exists(f"{data_dir}/{subdir}/"):
-        os.makedirs(f"{data_dir}/{subdir}/")
 
 
 def process_nytimes(random_seed=42, save=True):
@@ -193,7 +190,7 @@ def process_yelp(random_seed=32, save=True):
         df["label"] = df["label"] == 2
         return df[["text", "label"]]
     train = proc_df(ds["train"].to_pandas())
-    valid = proc_df(ds["validation"].to_pandas())
+    valid = proc_df(ds["eval"].to_pandas())
     test = proc_df(ds["test"].to_pandas())
     train_df = pd.concat([train, valid], ignore_index=True)
     train_df = train_df.sample(frac=0.15, random_state=random_seed).reset_index(drop=True)
@@ -235,6 +232,7 @@ def process_auditor():
     ds = load_dataset("FinanceInc/auditor_sentiment")
     def proc_df(df):
         df["idx"] = df.index
+        df["text"] = df["sentence"]
         df["label"] = df["label"] == 2
         return df[["idx", "text", "label"]]
     train = proc_df(ds["train"].to_pandas())
@@ -249,7 +247,7 @@ def process_fiqa():
         df["text"] = df["sentence"]
         # get the 75th percentile of the sentiment 'score'
         df["label"] = df['score'] > df['score'].quantile(0.75)
-        return df[["idx", "text", "label"]]
+        return df[["text", "label"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["valid"].to_pandas())
     test = proc_df(ds["test"].to_pandas())
@@ -282,7 +280,7 @@ def process_newsmtc():
     def proc_df(df):
         df["text"] = df["sentence"]
         df["label"] = df["polarity"] == 1
-        return df[["idx", "text", "label"]]
+        return df[["text", "label"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["validation"].to_pandas())
     test = proc_df(ds["test"].to_pandas())
@@ -310,7 +308,7 @@ def process_financial_phrasebank(random_seed=42, save=True):
     train = ds["train"].to_pandas()
     train["text"] = train["train"].apply(lambda x: x["sentence"])
     train["label"] = train["train"].apply(lambda x: x["label"]) == 2
-    train = train[["idx", "text", "label"]]
+    train = train[["text", "label"]]
     train_df = train.sample(frac=0.75, random_state=random_seed)
     valid = train.drop(train_df.index).reset_index(drop=True)
     train_df = train_df.reset_index(drop=True)
@@ -408,12 +406,12 @@ def process_sms_spam():
     valid.to_csv(f"{data_dir}/base/sms_spam_test.csv", index=False)
     return train_df, valid
 
-def process_mops(random_state=42, save=True):
+def process_mops(random_seed=42, save=True):
     ds = load_dataset("ManTle/mops", split="complete")
     df = ds.to_pandas()
     df = df[["premise", "theme"]]
     df["prompt_only"] = True
-    train = df.sample(frac=0.8, random_state=random_state).reset_index(drop=True)
+    train = df.sample(frac=0.8, random_state=random_seed).reset_index(drop=True)
     valid = df.drop(train.index).reset_index(drop=True)
     train["idx"] = train.index
     valid["idx"] = valid.index
@@ -428,9 +426,209 @@ def process_mops(random_state=42, save=True):
     test.to_csv(f"{data_dir}/base/mops_domain_test.csv", index=False)
     return train, valid
 
+def process_cosmoqa():
+    ds = load_dataset("allenai/cosmos_qa", trust_remote_code=True)
+    def proc_df(df):
+        df["choices"] = df["answer0"].apply(lambda x: [x]) + df["answer1"].apply(lambda x: [x]) + df["answer2"].apply(lambda x: [x]) + df["answer3"].apply(lambda x: [x])
+        df["question_save"] = df["question"]
+        df["question"] = "Context: " + df["context"] + "\nQuestion: " + df["question"]
+        df["answer"] = df["label"]
+        return df
+    train = proc_df(ds["train"].to_pandas())
+    valid = proc_df(ds["validation"].to_pandas())
+    test = proc_df(ds["test"].to_pandas())
+    train_df = pd.concat([train, valid], ignore_index=True).reset_index(drop=True)
+    train_df["idx"] = train_df.index
+    test["idx"] = test.index
+    train_df.to_csv(f"{data_dir}/base/cosmoqa_train.csv", index=False)
+    test.to_csv(f"{data_dir}/base/cosmoqa_test.csv", index=False)
+    return train_df, test
+
+def process_piqa():
+    ds = load_dataset("ybisk/piqa", trust_remote_code=True)
+    def proc_df(df):
+        df["idx"] = df.index
+        df["choices"] = df["sol1"].apply(lambda x: [x]) + df["sol2"].apply(lambda x: [x])
+        df["answer"] = df["label"]
+        return df
+    train = proc_df(ds["train"].to_pandas())
+    valid = proc_df(ds["validation"].to_pandas())
+    train.to_csv(f"{data_dir}/base/piqa_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/base/piqa_test.csv", index=False)
+
+def process_arc():
+    train_dfs = []
+    valid_dfs = []
+    for subset in ["ARC-Easy", "ARC-Challenge"]:
+        ds = load_dataset("ai2_arc", subset)
+        def proc_df(df):
+            df = df[df["choices"].apply(lambda x: len(x["label"]) == 4)].reset_index(drop=True)
+            answer_keymap = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D'}
+            df["answer"] = df["answerKey"].map(answer_keymap)
+            df['choices'] = df['choices'].apply(lambda x: x['text'].tolist())
+            df["challenge"] = (subset == "ARC-Challenge")
+            return df
+        train = proc_df(ds["train"].to_pandas())
+        valid = proc_df(ds["validation"].to_pandas())
+        test = proc_df(ds["test"].to_pandas())
+        train_df = pd.concat([train, valid], ignore_index=True).reset_index(drop=True)
+        train_dfs.append(train_df)
+        valid_dfs.append(test)
+    train_df = pd.concat(train_dfs, ignore_index=True).reset_index(drop=True)
+    valid_df = pd.concat(valid_dfs, ignore_index=True).reset_index(drop=True)
+    train_df["idx"] = train_df.index
+    valid_df["idx"] = valid_df.index
+    train_df.to_csv(f"{data_dir}/base/arc_train.csv", index=False)
+    valid_df.to_csv(f"{data_dir}/base/arc_test.csv", index=False)
+    return train, valid
+
+def process_medmcqa(random_seed=42, save=True):
+    ds = load_dataset("openlifescienceai/medmcqa")
+    def proc_df(df):
+        df["choices"] = df["opa"].apply(lambda x: [x]) + df["opb"].apply(lambda x: [x]) + df["opc"].apply(lambda x: [x]) + df["opd"].apply(lambda x: [x])
+        df["answer"] = df["cop"]
+        return df[["question", "choices", "answer"]]
+    train = ds.to_pandas().sample(frac=0.1, random_state=random_seed).reset_index(drop=True)
+    train = proc_df(train)
+    valid = proc_df(ds["validation"].to_pandas())
+    test = proc_df(ds["test"].to_pandas())
+    train_df = pd.concat([train, valid], ignore_index=True).reset_index(drop=True)
+    train_df["idx"] = train_df.index
+    test["idx"] = test.index
+    if save:
+        train_df.to_csv(f"{data_dir}/base/medmcqa_train.csv", index=False)
+        test.to_csv(f"{data_dir}/base/medmcqa_test.csv", index=False)
+    return train_df, test
+
+def process_commonsenseqa():
+    ds = load_dataset("tau/commonsense_qa")
+    def proc_df(df):
+        df["choices"] = df["choices"].apply(lambda x: x["text"].tolist())
+        df["answer"] = df["answerKey"]
+        return df[["question", "choices", "answer"]]
+    train = proc_df(ds["train"].to_pandas())
+    valid = proc_df(ds["validation"].to_pandas())
+    test = proc_df(ds["test"].to_pandas())
+    train_df = pd.concat([train, valid], ignore_index=True).reset_index(drop=True)
+    train_df["idx"] = train_df.index
+    test["idx"] = test.index
+    train_df.to_csv(f"{data_dir}/base/commonsenseqa_train.csv", index=False)
+    test.to_csv(f"{data_dir}/base/commonsenseqa_test.csv", index=False)
+    return train_df, test
+
+def process_openbookqa():
+    ds = load_dataset("allenai/openbookqa", "main")
+    def proc_df(df):
+        df["choices"] = df["choices"]["text"].apply(lambda x: x.tolist())
+        df["answer"] = df["answerKey"]
+        return df[["question", "choices", "answer"]]
+    train = proc_df(ds["train"].to_pandas())
+    valid = proc_df(ds["validation"].to_pandas())
+    test = proc_df(ds["test"].to_pandas())
+    train_df = pd.concat([train, valid], ignore_index=True).reset_index(drop=True)
+    train_df["idx"] = train_df.index
+    test["idx"] = test.index
+    train_df.to_csv(f"{data_dir}/base/openbookqa_train.csv", index=False)
+    test.to_csv(f"{data_dir}/base/openbookqa_test.csv", index=False)
+    return train_df, test
+
+def process_qasc():
+    ds = load_dataset("allenai/qasc")
+    def proc_df(df):
+        df["choices"] = df["choices"]["text"].apply(lambda x: x.tolist())
+        df["answer"] = df["answerKey"]
+        return df[["question", "choices", "answer"]]
+    train = proc_df(ds["train"].to_pandas())
+    valid = proc_df(ds["validation"].to_pandas())
+    test = proc_df(ds["test"].to_pandas())
+    train_df = pd.concat([train, valid], ignore_index=True).reset_index(drop=True)
+    train_df["idx"] = train_df.index
+    test["idx"] = test.index
+    train_df.to_csv(f"{data_dir}/base/qasc_train.csv", index=False)
+    test.to_csv(f"{data_dir}/base/qasc_test.csv", index=False)
+    return train_df, test
+
+def process_hellaswag(random_seed=42, save=True):
+    ds = load_dataset("AlekseyKorshuk/hellaswag")
+    def proc_df(df):
+        df["choices"] = df["endings"].apply(lambda x: x.tolist())
+        df["text"] = df["ctx"]
+        df["answer"] = df["label"]
+        return df[["text", "choices", "answer"]]
+    train = proc_df(ds["train"].to_pandas())
+    valid = proc_df(ds["validation"].to_pandas())
+    test = proc_df(ds["test"].to_pandas())
+    train_df = pd.concat([train, valid], ignore_index=True).sample(frac=0.35, random_state=random_seed).reset_index(drop=True)
+    train_df["idx"] = train_df.index
+    test["idx"] = test.index
+    if save:
+        train_df.to_csv(f"{data_dir}/base/hellaswag_train.csv", index=False)
+        test.to_csv(f"{data_dir}/base/hellaswag_test.csv", index=False)
+
+def process_bigbenchhard(random_seed=42, save=True):
+    subsets = ['boolean_expressions', 'causal_judgement', 'date_understanding', 'disambiguation_qa', 'dyck_languages', 'formal_fallacies', 'geometric_shapes', 'hyperbaton', 'logical_deduction_five_objects', 'logical_deduction_seven_objects', 'logical_deduction_three_objects', 'movie_recommendation', 'multistep_arithmetic_two', 'navigate', 'object_counting', 'penguins_in_a_table', 'reasoning_about_colored_objects', 'ruin_names', 'salient_translation_error_detection', 'snarks', 'sports_understanding', 'temporal_sequences', 'tracking_shuffled_objects_five_objects', 'tracking_shuffled_objects_seven_objects', 'tracking_shuffled_objects_three_objects', 'web_of_lies']
+    # mcq is date_und, disamb, geometric, hyperbaton, logicals, movie_reco, penguins, reasoning, ruin, salient, snarks, temporal, shuffled
+    mcqs = ["date_understanding", "disambiguation_qa", "geometric_shapes", "hyperbaton", "logical_deduction_five_objects", "logical_deduction_seven_objects", "logical_deduction_three_objects", "movie_recommendation", "penguins_in_a_table", "reasoning_about_colored_objects", "ruin_names", "salient_translation_error_detection", "snarks", "temporal_sequences", "tracking_shuffled_objects_five_objects", "tracking_shuffled_objects_seven_objects", "tracking_shuffled_objects_three_objects"]
+    numerical = ["multistep_arithmetic_two", "object_counting"]
+    # remaining are binary
+    binary = [x for x in subsets if x not in mcqs and x not in numerical]
+    train_dfs = {"mcq": [], "numerical": [], "all": []}
+    test_dfs = {"mcq": [], "numerical": [],  "all": []}
+
+    def get_choices(choice_str):
+        # look for the regex pattern (LETTER) OPTION TEXT and split by (LETTER)
+        options = re.split(r"\([A-Z]\)", choice_str)[1:]
+        return [x.strip() for x in options]
+
+    for subset in subsets:
+        ds = load_dataset("maveriq/bigbenchhard", subset) # there are exactly 250 examples per subset, 200 for test rest train
+        df = ds["train"].to_pandas()
+        df["text"] = df["input"]
+        if isinstance(df["target"][0], str):
+            df["answer"] = df["target"].apply(lambda x: x.strip("()"))
+        else:
+            df["answer"] = df["target"]
+        df["subset"] = subset
+        if "Options: " in df["text"][0] and (subset in mcqs or subset in binary):
+            df["question"] = df["text"].apply(lambda x: x.split("Options: ")[0])
+            if subset in binary:
+                all_options = df["answer"].unique().tolist()
+                df["choices"] = all_options
+                df["answer"] = df["target"].apply(lambda x: all_options.index(x))
+            else:
+                df["choices"] = get_choices(df["text"].apply(lambda x: x.split("Options: ")[1]))
+                df["answer"] = letter_to_int(df["answer"])
+        train_df = df.sample(n=50, random_state=random_seed)
+        test_df = df.drop(train_df.index).reset_index(drop=True)
+        train_df = train_df.reset_index(drop=True)
+        train_df["idx"] = train_df.index
+        test_df["idx"] = test_df.index
+        if subset in mcqs or subset in binary:
+            train_dfs["mcq"].append(train_df)
+            test_dfs["mcq"].append(test_df)
+        elif subset in numerical:
+            assert train_df["answer"].nunique() > 10
+            train_dfs["numerical"].append(train_df)
+            test_dfs["numerical"].append(test_df)
+        else:
+            assert train_df["answer"].nunique() == 2
+            train_dfs["binary"].append(train_df)
+            test_dfs["binary"].append(test_df)
+        train_dfs["all"].append(train_df)
+        test_dfs["all"].append(test_df)
+    for kind in train_dfs:
+        train_df = pd.concat(train_dfs[kind], ignore_index=True)
+        test_df = pd.concat(test_dfs[kind], ignore_index=True)
+        if save:
+            train_df.to_csv(f"{data_dir}/base/bigbenchhard_{kind}_train.csv", index=False)
+            test_df.to_csv(f"{data_dir}/base/bigbenchhard_{kind}_test.csv", index=False)
+    return train_df, test_df
+
 
 
 def save_dfs(train, valid, dataset_name, taskname):
+    if not os.path.exists(f"{data_dir}/{taskname}/"):
+        os.makedirs(f"{data_dir}/{taskname}/")
     train.to_csv(f"{data_dir}/{taskname}/{dataset_name}_train.csv", index=False)
     valid.to_csv(f"{data_dir}/{taskname}/{dataset_name}_test.csv", index=False)
 
@@ -561,7 +759,6 @@ class NewsTopic:
             keep_topics = ["Business", "Sci/Tech"]
             df = df[df["label_text"].isin(keep_topics)].reset_index(drop=True)
             df["label"] = df["label_text"] == "Sci/Tech"
-            df = df[df["label_text"]]
             return df[["idx", "text", "label"]]
         train = proc_df(train)
         valid = proc_df(valid)
@@ -592,8 +789,8 @@ class NewsTopic:
         def proc_df(df):
             df["text"] = NewsTopic.prompt_task_dict[prompt_task] + df["text"] + "\n"
             keep_topics = ["Science", "Real Estate", "Economy", "Technology", "Your Money", "Global Business"]
-            df = df[df["label_text"].isin(keep_topics)].reset_index(drop=True)
-            df["label"] = df["label_text"].isin(["Technology", "Science"])
+            df = df[df["section"].isin(keep_topics)].reset_index(drop=True)
+            df["label"] = df["section"].isin(["Technology", "Science"])
             return df[["idx", "text", "label"]]
         train = proc_df(train)
         valid = proc_df(valid)
@@ -639,8 +836,8 @@ class Sentiment:
         return self.setupstandard("fiqa", save, prompt_task)
     
     def setupindosentiment(self, save=True, prompt_task=None):
-        train = pd.read_csv(f"{data_dir}/base/indosentiment_train.csv")
-        valid = pd.read_csv(f"{data_dir}/base/indosentiment_test.csv")
+        train = pd.read_csv(f"{data_dir}/base/indosentiment_train.csv", lineterminator="\n")
+        valid = pd.read_csv(f"{data_dir}/base/indosentiment_test.csv", lineterminator="\n")
         def proc_df(df, text_col="text"):
             df = df[["idx", "text", "label"]]
             df["text"] = Sentiment.prompt_task_dict[prompt_task] + df["text"]
@@ -648,13 +845,13 @@ class Sentiment:
             return df
         train_df = proc_df(train)
         valid_df = proc_df(valid)
-        prompt_task = "_"+prompt_task if prompt_task is not None else ""
+        prompt_task_text = "_"+prompt_task if prompt_task is not None else ""
         if save:
-            save_dfs(train_df, valid_df, "indosentiment_eng", self.taskname+prompt_task)
+            save_dfs(train_df, valid_df, "indosentiment_eng", self.taskname+prompt_task_text)
         train_df = proc_df(train, "alt_text")
         valid_df = proc_df(valid, "alt_text")
         if save:
-            save_dfs(train_df, valid_df, "indosentiment_ind", self.taskname+prompt_task)
+            save_dfs(train_df, valid_df, "indosentiment_ind", self.taskname+prompt_task_text)
         return train, valid
 
     def setupnewsmtc(self, save=True, prompt_task=None):
@@ -673,111 +870,244 @@ class Sentiment:
         return self.setupstandard("sst5", save, prompt_task)
 
 
-def mmlu_choices_to_text(choices):
+def choices_to_text(choices):
     text = ""
-    options = ["A", "B", "C", "D"]
-    #options = [0, 1, 2, 3]
     for i, choice in enumerate(choices):
-        text += f"\nOption {options[i]}: {choice}"
+        text += f"\nOption {int_to_letter(i)}: {choice}"
     return text
 
-def mmlu_answer_to_letter(answer):
-    return ["A", "B", "C", "D"][answer]
+def int_to_letter(answer):
+    # Return the letter corresponding to the integer answer in capital
+    if isinstance(answer, str):
+        assert answer in "ABCDEFGHIJKLMNOPQRST"
+        return answer
+    assert answer in range(20)
+    return chr(answer + 65)
+
+def letter_to_int(answer):
+    # Return the integer corresponding to the letter answer
+    if isinstance(answer, int):
+        assert answer in range(20)
+        return answer
+    assert answer in "ABCDEFGHIJKLMNOPQRST"
+    return ord(answer) - 65
+
+
+def randomize_choices(choices, answer, force_total=None):
+    # Randomize the choices and return the new choices and the new answer
+    remember_dtype = "int" if isinstance(answer, int) else "str"
+    if isinstance(answer, str):
+        answer = letter_to_int(answer)
+    answer_text = choices[answer]
+    for choice in choices:
+        assert choices.count(choice) == 1
+    if force_total is not None:
+        assert len(choices) >= force_total
+        remaining = [x for x in choices if x != answer_text]
+        np.random.shuffle(remaining)
+        choices = [answer_text]
+        choices += remaining[:force_total-1]
+    np.random.shuffle(choices)
+    new_answer = choices.index(answer_text)
+    if remember_dtype == "str":
+        new_answer = int_to_letter(new_answer)
+    return choices, new_answer
 
 
 class Confidence:
     taskname = "confidence"
+    system_prompt = "Answer the following MCQ by providing the correct option"
+
+    def setupstandard(self, name, question_column="question", subset_col=None, save=True, random_seed=42, k=2, force_total=None, train=None, valid=None):
+        if train is None or valid is None:
+            train = pd.read_csv(f"{data_dir}/base/{name}_train.csv")
+            valid = pd.read_csv(f"{data_dir}/base/{name}_test.csv")
+        def proc_df(df):
+            if not isinstance(df.loc[0, "choices"], list):
+                df["choices"] = df["choices"].apply(eval)
+            for i in range(len(df)):
+                prompt_candidates = df[df["idx"] != df.loc[i, "idx"]].reset_index(drop=True)
+                if subset_col is not None:
+                    subset = df.loc[i, subset_col]
+                    prompt_candidates = prompt_candidates[prompt_candidates[subset_col] == subset].reset_index(drop=True)
+                prompt_selected = prompt_candidates.sample(k, random_state=random_seed).reset_index(drop=True)
+                prompt = Confidence.system_prompt
+                for j in range(k):
+                    question_component = f"\nQuestion: {prompt_selected.loc[j, question_column]}"
+                    choices, answer = randomize_choices(prompt_selected.loc[j, "choices"], prompt_selected.loc[j, "answer"], force_total=force_total)
+                    choices_component = choices_to_text(choices)
+                    answer_component = f"\nAnswer: {int_to_letter(answer)} [STOP]"
+                    prompt = prompt + question_component + choices_component + answer_component
+                own_question_component = f"\nQuestion: {df.loc[i, question_column]}"
+                choices, answer = randomize_choices(df.loc[i, "choices"], df.loc[i, "answer"], force_total=force_total)
+                own_choices_component = choices_to_text(choices)
+                df.loc[i, "text"] = prompt + own_question_component + own_choices_component + "\nAnswer: "
+                df.loc[i, "gold"] = int_to_letter(answer)
+            retcols = ["idx", "text", "gold"]
+            if subset_col is not None:
+                retcols.append(subset_col)
+            df = df[retcols]
+            return df
+        train = proc_df(train)
+        valid = proc_df(valid)
+        savename = ""
+        if force_total is not None:
+            savename += f"_{force_total}_ops"
+        if save:
+            save_dfs(train, valid, name, self.taskname+savename)
+        return train, valid
 
     def setupmmlu(self, k=2, save=True, random_seed=42):
-        train = pd.read_csv(f"{data_dir}/base/mmlu_train.csv")
-        valid = pd.read_csv(f"{data_dir}/base/mmlu_test.csv")
-        system_prompt = "Answer the following MCQ by providing the correct option"
-        def proc_df(df):
-            df["choices"] = df["choices"].apply(eval)
-            for i in range(len(df)):
-                subject = df.loc[i, "subject"]
-                train_subjects = train[(train["subject"] == subject) & (train["idx"] != df.loc[i, "idx"])].reset_index(drop=True)
-                train_subjects = train_subjects.sample(k, random_state=random_seed).reset_index(drop=True)
-                prompt = ""
-                for j in range(k):
-                    prompt += f"\nQuestion: {train_subjects.loc[j, 'question']}{mmlu_choices_to_text(train_subjects.loc[j, 'choices'])}\nAnswer: {mmlu_answer_to_letter(train_subjects.loc[j, 'answer'])} [STOP]"
-                df.loc[i, "text"] = f"{system_prompt}\n{prompt}\nQuestion: {df.loc[i, 'question']}{mmlu_choices_to_text(df.loc[i, 'choices'])}\nAnswer: "
-                df.loc[i, "gold"] = mmlu_answer_to_letter(df.loc[i, "answer"])
-            return df[["idx", "text", "gold"]]
-        train_df = proc_df(train)
-        valid = proc_df(valid)
-        if save:
-            save_dfs(train_df, valid, "mmlu", self.taskname)
-        return train_df, valid
+        train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subset", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subset", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_cosmoqa(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("cosmoqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("cosmoqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_piqa(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("piqa", question_column="prompt", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("piqa", question_column="prompt", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_arc(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("arc", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("arc", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_medmcqa(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("medmcqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("medmcqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_commonsenseqa(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("commonsenseqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("commonsenseqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_openbookqa(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("openbookqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("openbookqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_qasc(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("qasc", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("qasc", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_hellaswag(self, k=2, save=True, random_seed=42):
+        train = pd.read_csv(f"{data_dir}/base/hellaswag_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/hellaswag_test.csv")
+        train["question"] = "Which of the following continuations to the text are the most appropriate? \nText: " + train["text"]
+        valid["question"] = "Which of the following continuations to the text are the most appropriate? \nText: " + valid["text"]
+        self.setupstandard("hellaswag", question_column="text", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("hellaswag", question_column="text", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+    
+    def setup_bigbenchhard(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("bigbenchhard_mcq", question_column="text", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("bigbenchhard_mcq", question_column="text", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
+
+    
+
+
+def process_batch(batch_nos):
+    if 0 in batch_nos:
+        process_squad()
+        process_healthver()
+        process_selfaware()
+        process_known_unkown()
+        process_mmlu()
+        process_real_toxicity_prompts()
+        process_toxic_chat()
+        process_qnota()
+    if 1 in batch_nos:
+        process_agnews()
+        process_bbcnews()
+        process_nytimes()
+        process_amazonreviews()
+        process_yelp()
+        process_twitterfinance()
+        process_twittermteb()
+        process_auditor()
+        process_fiqa()
+        process_indosentiment()
+        process_newsmtc()
+        process_imdb()
+        process_financial_phrasebank()
+        process_dair_emotion()
+        process_colbert_humor()
+        process_epic_irony()
+        process_sst5()
+        process_sms_spam()
+        process_mops()
+    if 2 in batch_nos:
+        process_cosmoqa()
+        process_piqa()
+        process_arc()
+        process_medmcqa()
+        process_commonsenseqa()
+        process_openbookqa()
+        process_qasc()
+        process_hellaswag()
+        process_bigbenchhard()
+
+
 
 def process_all():
-    process_squad()
-    process_healthver()
-    process_selfaware()
-    process_known_unkown()
-    process_mmlu()
-    process_real_toxicity_prompts()
-    process_toxic_chat()
-    process_qnota()
-    process_agnews()
-    process_bbcnews()
-    process_nytimes()
-    process_amazonreviews()
-    process_yelp()
-    process_twitterfinance()
-    process_twittermteb()
-    process_auditor()
-    process_fiqa()
-    process_indosentiment()
-    process_newsmtc()
-    process_imdb()
-    process_financial_phrasebank()
-    process_dair_emotion()
-    process_colbert_humor()
-    process_epic_irony()
-    process_sst5()
-    process_sms_spam()
-    process_mops()
+    process_batch([0, 1])
     return
 
 
-def setup_all():
+def setup_batch(batch_nos):
     unanswerable = Unanswerable()
     toxicity = ToxicityAvoidance()
     jailbreak = Jailbreak()
     confidence = Confidence()
     news_topic = NewsTopic()
     sentiment = Sentiment()
-    unanswerable.setuphealthver()
-    unanswerable.setupqnota()
-    unanswerable.setupselfaware()
-    unanswerable.setupsquad()
-    unanswerable.setupknown_unknown()
-    confidence.setupmmlu()
-    toxicity.setup_real_toxicity_prompts()
-    toxicity.setup_toxic_chat()
-    jailbreak.setup_toxic_chat()
-    for key in news_topic.prompt_task_dict:
-        news_topic.setupagnews(prompt_task=key)
-        news_topic.setupbbcnews(prompt_task=key)
-        news_topic.setupnytimes(prompt_task=key)
-    for key in sentiment.prompt_task_dict:
-        sentiment.setupamazonreviews(prompt_task=key)
-        sentiment.setupyelp(prompt_task=key)
-        sentiment.setuptwitterfinance(prompt_task=key)
-        sentiment.setuptwittermteb(prompt_task=key)
-        sentiment.setupauditorsentiment(prompt_task=key)
-        sentiment.setupfiqa(prompt_task=key)
-        sentiment.setupindosentiment(prompt_task=key)
-        sentiment.setupnewsmtc(prompt_task=key)
-        sentiment.setupimdb(prompt_task=key)
-        sentiment.setupfinancial_phrasebank(prompt_task=key)
-        sentiment.setupdair_emotion(prompt_task=key)
-        sentiment.setup_sst5(prompt_task=key)
+    if 0 in batch_nos:
+        unanswerable.setuphealthver()
+        unanswerable.setupqnota()
+        unanswerable.setupselfaware()
+        unanswerable.setupsquad()
+        unanswerable.setupknown_unknown()
+        confidence.setupmmlu()
+        toxicity.setup_real_toxicity_prompts()
+        toxicity.setup_toxic_chat()
+        jailbreak.setup_toxic_chat()
+    if 1 in batch_nos:
+        for key in news_topic.prompt_task_dict:
+            news_topic.setupagnews(prompt_task=key)
+            news_topic.setupbbcnews(prompt_task=key)
+            news_topic.setupnytimes(prompt_task=key)
+        for key in sentiment.prompt_task_dict:
+            sentiment.setupamazonreviews(prompt_task=key)
+            sentiment.setupyelp(prompt_task=key)
+            sentiment.setuptwitterfinance(prompt_task=key)
+            sentiment.setuptwittermteb(prompt_task=key)
+            sentiment.setupauditorsentiment(prompt_task=key)
+            sentiment.setupfiqa(prompt_task=key)
+            sentiment.setupindosentiment(prompt_task=key)
+            sentiment.setupnewsmtc(prompt_task=key)
+            sentiment.setupimdb(prompt_task=key)
+            sentiment.setupfinancial_phrasebank(prompt_task=key)
+            sentiment.setupdair_emotion(prompt_task=key)
+            sentiment.setup_sst5(prompt_task=key)
+
+
+
+
+
+def setup_all():
+    setup_batch([0, 1])
     return
 
 
 
 if __name__ == "__main__":
-    process_all()
-    setup_all()
+    process_batch([1])
+    setup_batch([1])
