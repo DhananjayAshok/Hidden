@@ -4,6 +4,8 @@ import os
 import warnings
 
 logdir = os.environ["LOG_DIR"]
+results_dir = os.environ["RESULTS_DIR"]
+
 report_dir = os.path.join(logdir, "reports")
 if not os.path.exists(report_dir):
     os.makedirs(report_dir)
@@ -29,7 +31,7 @@ def do_iid_probe(base_path, report_file):
         return
     
     data = []
-    columns = ["model", "task", "dataset", "model_kind", "n_train", "n_test", "random_seed", "accuracy"]
+    columns = ["model", "task", "dataset", "model_kind", "n_train", "n_test", "random_seed", "accuracy", "test_base_rate"]
 
     for model_save_name in model_options:
         task_options = os.listdir(os.path.join(base_path, model_save_name))
@@ -68,7 +70,26 @@ def do_iid_probe(base_path, report_file):
                         if len(accuracies) > 1:
                             warnings.warn(f"Multiple accuracies found in {file}. Using the last one ...")
                         accuracy = accuracies[-1]
-                        data.append([model_save_name, task, dataset, model_kind, n_train, n_test, random_seed, accuracy])
+                        # get the base rate of the test set, it is in a line in the format Base rate: {y_train.mean()} (Train), {y_test.mean()} (Test)
+                        base_rate_lines = [line for line in lines if "Base rate: " in line]
+                        if len(base_rate_lines) == 0:
+                            warnings.warn(f"No base rate found in {file}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
+                            continue
+                        if len(base_rate_lines) > 1:
+                            warnings.warn(f"Multiple base rates found in {file}. Using the last one ...")
+                        base_rate_str = base_rate_lines[-1].split(",")[1].split("(")[0].strip()
+                        base_rate = float(base_rate_str)
+                        # now try to open the train and test files and check whether it has n_train and n_test points
+                        try:
+                            train_df = pd.read_csv(f"{results_dir}/{model_save_name}/{task}/{dataset}_train_inference.csv")
+                            if len(train_df) < n_train:
+                                n_train = len(train_df)
+                            test_df = pd.read_csv(f"{results_dir}/{model_save_name}/{task}/{dataset}_test_inference.csv")
+                            if len(test_df) < n_test:
+                                n_test = len(test_df)
+                        except:
+                            warnings.warn(f"Could not find train or test inference files for {model_save_name}, {task}, {dataset}. Skipping the autoinference for n_train and n_test ...")
+                        data.append([model_save_name, task, dataset, model_kind, n_train, n_test, random_seed, accuracy, base_rate])
     df = pd.DataFrame(data, columns=columns)
     df.to_csv(report_file, index=False)
     return
