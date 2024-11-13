@@ -626,6 +626,7 @@ def process_bigbenchhard(random_seed=42, save=True):
             df = df[df["target"] != "Monsters, Inc"].reset_index(drop=True)
         if subset == "ruin_names":
             df = df[df["target"] != "dearth, wind, & fire"].reset_index(drop=True)
+            df = df[df["target"] != "rita, sue and bob poo"].reset_index(drop=True)
         df["text"] = df["input"]
         if isinstance(df["target"][0], str):
             df["answer"] = df["target"].apply(lambda x: x.strip("()"))
