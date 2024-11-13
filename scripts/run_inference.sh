@@ -1,5 +1,5 @@
 task="sentiment"
-datasets=("amazonreviews" "yelp" "twitterfinance" "twittermteb" "auditorsentiment" "fiqa" "indosentiment" "newsmtc" "imdb" "financial_phrasebank" "dair_emotion" "sst5")
+datasets=("amazonreviews" "yelp" "twitterfinance" "twittermteb" "auditorsentiment" "fiqa" "indosentiment_eng" "newsmtc" "imdb" "financial_phrasebank" "dair_emotion" "sst5")
 splits=("train" "test")
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 

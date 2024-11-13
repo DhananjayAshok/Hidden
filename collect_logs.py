@@ -17,11 +17,12 @@ def main(experiment):
     base_path = os.path.join(logdir, experiment)
     report_file = report_dir + f"/{experiment}.csv"
     if experiment == "probe_iid":
-        do_iid_probe(base_path, report_file)
+        df = do_iid_probe(base_path, report_file)
     elif experiment == "probe_ood":
         raise NotImplementedError
     else:
         raise NotImplementedError
+    df.to_csv(report_file, index=False)
 
 
 def do_iid_probe(base_path, report_file):
@@ -88,11 +89,20 @@ def do_iid_probe(base_path, report_file):
                             if len(test_df) < n_test:
                                 n_test = len(test_df)
                         except:
-                            warnings.warn(f"Could not find train or test inference files for {model_save_name}, {task}, {dataset}. Skipping the autoinference for n_train and n_test ...")
+                            if "indosentiment" in dataset:
+                                train_df = pd.read_csv(f"{results_dir}/{model_save_name}/{task}/{dataset}_train_inference.csv", lineterminator="\n")
+                                if len(train_df) < n_train:
+                                    n_train = len(train_df)
+                                test_df = pd.read_csv(f"{results_dir}/{model_save_name}/{task}/{dataset}_test_inference.csv", lineterminator="\n")
+                                if len(test_df) < n_test:
+                                    n_test = len(test_df)
+                            else:
+                                warnings.warn(f"Could not find train or test inference files for {model_save_name}, {task}, {dataset}. Skipping the autoinference for n_train and n_test ...")
                         data.append([model_save_name, task, dataset, model_kind, n_train, n_test, random_seed, accuracy, base_rate])
     df = pd.DataFrame(data, columns=columns)
-    df.to_csv(report_file, index=False)
-    return
+    df['baseline'] = df['test_base_rate'].apply(lambda x: max(x, 1-x))
+    df['advantage'] = df['accuracy'] - df['baseline']
+    return df
 
 
 

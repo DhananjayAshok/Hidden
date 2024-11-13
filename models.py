@@ -45,7 +45,7 @@ class SKLearnModel:
 class Linear(SKLearnModel):
     def __init__(self, penalty='l2', C=1.0):
         self.name = f"linear-{penalty}-C-{C}"
-        self.model = LogisticRegression(random_state=0, penalty=penalty, C=C)
+        self.model = LogisticRegression(random_state=0, penalty=penalty, C=C, class_weight="balanced")
 
 
 class RandomForest(SKLearnModel):
