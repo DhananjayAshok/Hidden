@@ -2,6 +2,7 @@ import pandas as pd
 from datasets import load_dataset
 import numpy as np
 import os
+from tqdm import tqdm
 import re
 
 def remove_urls(text):
@@ -467,7 +468,9 @@ def process_piqa():
     def proc_df(df):
         df["idx"] = df.index
         df["choices"] = df["sol1"].apply(lambda x: [x]) + df["sol2"].apply(lambda x: [x])
-        df["answer"] = df["label"]
+        df["answer"] = df["label"].astype(int)
+        nan_cols = df[["goal", "choices", "answer"]].isna().any(axis=1)
+        df = df[~nan_cols].reset_index(drop=True)
         return df
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["validation"].to_pandas())
@@ -664,6 +667,8 @@ def process_ragtruth():
 
 def process_faithbench():
     raise NotImplementedError
+
+
 
 def process_felm(random_seed=42, save=True):
     train_dfs = []
@@ -959,7 +964,8 @@ def randomize_choices(choices, answer, force_total=None):
     answer_text = choices[answer]
     for choice in choices:
         if choices.count(choice) > 1:
-            print(f"Warning: {choice} is repeated in {choices}")
+            #print(f"Warning: {choice} is repeated in {choices}")
+            pass
     if force_total is not None:
         assert len(choices) >= force_total
         remaining = [x for x in choices if x != answer_text]
@@ -984,12 +990,15 @@ class Confidence:
         def proc_df(df):
             if not isinstance(df.loc[0, "choices"], list):
                 df["choices"] = df["choices"].apply(eval)
-            for i in range(len(df)):
+            if not isinstance(df.loc[0, "answer"], str):
+                df["answer"] = df["answer"].astype(int)
+            for i in tqdm(range(len(df))):
                 prompt_candidates = df[df["idx"] != df.loc[i, "idx"]].reset_index(drop=True)
                 if subset_col is not None:
                     subset = df.loc[i, subset_col]
-                    prompt_candidates = prompt_candidates[prompt_candidates[subset_col] == subset].reset_index(drop=True)
-                prompt_selected = prompt_candidates.sample(k, random_state=random_seed).reset_index(drop=True)
+                    prompt_candidates = prompt_candidates[prompt_candidates[subset_col] == subset]
+                prompt_index = np.random.choice(prompt_candidates.index, k, replace=False)
+                prompt_selected = prompt_candidates.loc[prompt_index].reset_index(drop=True)
                 prompt = Confidence.system_prompt
                 for j in range(k):
                     question_component = f"\nQuestion: {prompt_selected.loc[j, question_column]}"
