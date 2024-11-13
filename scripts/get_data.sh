@@ -14,6 +14,7 @@ cd healthver
 wget https://raw.githubusercontent.com/sarrouti/HealthVer/refs/heads/master/data/healthver_train.csv
 wget https://raw.githubusercontent.com/sarrouti/HealthVer/refs/heads/master/data/healthver_dev.csv
 wget https://raw.githubusercontent.com/sarrouti/HealthVer/refs/heads/master/data/healthver_test.csv
+
 cd ..
 mkdir qnota
 cd qnota
@@ -23,6 +24,18 @@ wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/m
 wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/unmeasurable_questions.json
 wget https://raw.githubusercontent.com/Nisarg-P-Patel/QNotA_dataset/refs/heads/main/Dataset/incorrect_questions.json
 
+cd ..
 mkdir nytimes
 cd nytimes
 wget https://raw.githubusercontent.com/billywzh717/N24News/refs/heads/main/nytimes_dataset.json
+
+cd ..
+mkdir ragtruth
+cd ragtruth
+wget https://raw.githubusercontent.com/ParticleMedia/RAGTruth/refs/heads/main/dataset/source_info.jsonl
+
+cd ..
+mkdir faithbench
+https://raw.githubusercontent.com/vectara/FaithBench/refs/heads/main/FaithBench.csv
+cd ..
+

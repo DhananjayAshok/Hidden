@@ -12,6 +12,11 @@ def remove_urls(text):
     return cleaned_text
 
 data_dir = os.environ["DATA_DIR"]
+if not os.path.exists(data_dir):
+    raise ValueError(f"DATA_DIR {data_dir} does not exist. Please set the DATA_DIR environment variable to the directory where you want to save the data and then run the scripts/get_data.sh script.")
+if not os.path.exists(data_dir+"/base/"):
+    os.makedirs(data_dir+"/base/")
+
 maximum_train_size = 5000 # Will never save more than this number of training examples
 global_random_seed = 42
 np.random.seed(global_random_seed)
@@ -501,7 +506,7 @@ def process_medmcqa(random_seed=42, save=True):
         df["choices"] = df["opa"].apply(lambda x: [x]) + df["opb"].apply(lambda x: [x]) + df["opc"].apply(lambda x: [x]) + df["opd"].apply(lambda x: [x])
         df["answer"] = df["cop"]
         return df[["question", "choices", "answer"]]
-    train = ds.to_pandas().sample(frac=0.1, random_state=random_seed).reset_index(drop=True)
+    train = ds["train"].to_pandas().sample(frac=0.1, random_state=random_seed).reset_index(drop=True)
     train = proc_df(train)
     valid = proc_df(ds["validation"].to_pandas())
     test = proc_df(ds["test"].to_pandas())
@@ -532,8 +537,9 @@ def process_commonsenseqa():
 def process_openbookqa():
     ds = load_dataset("allenai/openbookqa", "main")
     def proc_df(df):
-        df["choices"] = df["choices"]["text"].apply(lambda x: x.tolist())
+        df["choices"] = df["choices"].apply(lambda x: x["text"].tolist())
         df["answer"] = df["answerKey"]
+        df["question"] = df["question_stem"]
         return df[["question", "choices", "answer"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["validation"].to_pandas())
@@ -548,7 +554,7 @@ def process_openbookqa():
 def process_qasc():
     ds = load_dataset("allenai/qasc")
     def proc_df(df):
-        df["choices"] = df["choices"]["text"].apply(lambda x: x.tolist())
+        df["choices"] = df["choices"].apply(lambda x: x["text"].tolist())
         df["answer"] = df["answerKey"]
         return df[["question", "choices", "answer"]]
     train = proc_df(ds["train"].to_pandas())
@@ -636,6 +642,53 @@ def process_bigbenchhard(random_seed=42, save=True):
             train_df.to_csv(f"{data_dir}/base/bigbenchhard_{kind}_train.csv", index=False)
             test_df.to_csv(f"{data_dir}/base/bigbenchhard_{kind}_test.csv", index=False)
     return train_df, test_df
+
+
+def process_truthfulqa(random_seed=42, save=True):
+    ds = load_dataset("truthfulqa/truthful_qa", "multiple_choice")
+    train = ds["validation"].to_pandas()
+    train["choices"] = train["mc1_targets"].apply(lambda x: x["choices"].tolist())
+    train["answer"] = train["mc1_targets"].apply(lambda x: x["labels"].index(1))
+    train_df = train.sample(frac=0.2, random_state=random_seed)
+    valid = train.drop(train_df.index).reset_index(drop=True)
+    train_df = train_df.reset_index(drop=True)
+    train_df["idx"] = train_df.index
+    valid["idx"] = valid.index
+    if save:
+        train_df.to_csv(f"{data_dir}/base/truthfulqa_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/base/truthfulqa_test.csv", index=False)
+    return train_df, valid  
+
+def process_ragtruth():
+    raise NotImplementedError
+
+def process_faithbench():
+    raise NotImplementedError
+
+def process_felm(random_seed=42, save=True):
+    train_dfs = []
+    valid_dfs = []
+    for subset in ["wk", "science"]:
+        ds = load_dataset("hkust-nlp/felm", subset)
+        def proc_df(df):
+            df["text"] = df["prompt"] + df["response"]
+            return df
+        train = proc_df(ds["test"].to_pandas())
+        train_df = train.sample(frac=0.2, random_state=random_seed)
+        valid = train.drop(train_df.index).reset_index(drop=True)
+        train_df = train_df.reset_index(drop=True)
+        train_df["idx"] = train_df.index
+        valid["idx"] = valid.index
+        train_dfs.append(train_df)
+        valid_dfs.append(valid)
+    train_df = pd.concat(train_dfs, ignore_index=True)
+    valid_df = pd.concat(valid_dfs, ignore_index=True)
+    if save:
+        train_df.to_csv(f"{data_dir}/base/felm_train.csv", index=False)
+        valid_df.to_csv(f"{data_dir}/base/felm_test.csv", index=False)
+    return train_df, valid_df
+
+
 
 class ToxicityAvoidance:
     taskname = "toxicity_avoidance"
@@ -905,7 +958,8 @@ def randomize_choices(choices, answer, force_total=None):
         answer = letter_to_int(answer)
     answer_text = choices[answer]
     for choice in choices:
-        assert choices.count(choice) == 1
+        if choices.count(choice) > 1:
+            print(f"Warning: {choice} is repeated in {choices}")
     if force_total is not None:
         assert len(choices) >= force_total
         remaining = [x for x in choices if x != answer_text]
@@ -948,10 +1002,6 @@ class Confidence:
                 own_choices_component = choices_to_text(choices)
                 df.loc[i, "text"] = prompt + own_question_component + own_choices_component + "\nAnswer: "
                 df.loc[i, "gold"] = int_to_letter(answer)
-            retcols = ["idx", "text", "gold"]
-            if subset_col is not None:
-                retcols.append(subset_col)
-            df = df[retcols]
             return df
         train = proc_df(train)
         valid = proc_df(valid)
@@ -963,8 +1013,8 @@ class Confidence:
         return train, valid
 
     def setup_mmlu(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subset", save=False, random_seed=random_seed, k=k)
-        train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subset", save=save, random_seed=random_seed, k=k, force_total=2)
+        train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subject", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subject", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_cosmoqa(self, k=2, save=True, random_seed=42):
@@ -973,6 +1023,7 @@ class Confidence:
         return train, valid
     
     def setup_piqa(self, k=2, save=True, random_seed=42):
+        # TODO: Eval fails here
         train, valid = self.setupstandard("piqa", question_column="prompt", save=False, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("piqa", question_column="prompt", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid

@@ -7,5 +7,5 @@ cd transformers
 pip install -e .
 cd ..
 pip install click, gdown, datasets, accelerate
-bash get_data.sh
+bash scripts/get_data.sh
 python data.py 

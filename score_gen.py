@@ -93,7 +93,7 @@ class ToxDectRoberta:
 
     def __call__(self, texts, labels, filehash=None):
         all_scores = []
-        for i in range(0, len(texts), self.batch_size):
+        for i in tqdm(range(0, len(texts), self.batch_size)):
             batch_texts = texts[i:i+self.batch_size]
             batch_scores = self.classifier(batch_texts)
             for output in batch_scores:
@@ -108,6 +108,39 @@ class ToxDectRoberta:
                 all_scores.append(scores[1])
         return all_scores
 
+
+class HallucinationDetector:
+    def __init__(self, batch_size=5):
+        self.batch_size = batch_size
+        self.classifier = pipeline("text-classification", model="vectara/hallucination_evaluation_model", trust_remote_code=True, device_map="auto")
+
+
+    @staticmethod
+    def get_context(text):
+        return None
+    
+    @staticmethod
+    def get_generation(text):
+        return None
+
+    def __call__(self, texts, labels, filehash=None):        
+        prompt = "<pad> Determine if the hypothesis is true given the premise?\n\nPremise: [TEXT1]\n\nHypothesis: [TEXT2]"
+        all_scores = []
+        for i in tqdm(range(0, len(texts), self.batch_size)):
+            batch_texts = [x.replace("[TEXT1]", self.get_context(x)).replace("[TEXT2]", self.get_generation(x)) for x in texts[i:i+self.batch_size]]
+            batch_scores = self.classifier(batch_texts, top_k=None)
+            simple_scores = [score_dict['score'] for score_for_both_labels in batch_scores for score_dict in score_for_both_labels if score_dict['label'] == 'hallucinated']
+            for output in batch_scores:
+                scores = [0, 0]
+                for scoredict in output:
+                    label = scoredict["label"]
+                    score = scoredict["score"]
+                    if label == "LABEL_0":
+                        scores[0] = score
+                    elif label == "LABEL_1":
+                        scores[1] = score
+                all_scores.append(scores[1])
+        return all_scores
 
 class StringMatch:
     def __init__(self, cot=False):
