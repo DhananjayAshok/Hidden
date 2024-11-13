@@ -1,5 +1,8 @@
 declare -A tasks_and_datasets=(
-    ["confidence"]="mmlu healthver"
+    ["confidence"]="mmlu"
+    ["unanswerable"]="squad healthver qnota selfaware known_unknown"
+    ["sentiment"]="amazonreviews yelp twitterfinance twittermteb auditorsentiment fiqa indosentiment newsmtc imdb financial_phrasebank dair_emotion sst5"
+    ["toxicity_avoidance"]="real_toxicity_prompts toxic_chat"
 )
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 random_seed=42
