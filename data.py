@@ -106,6 +106,9 @@ def process_healthver():
     test.to_csv(f"{data_dir}/base/healthver_test.csv", index=False)
     return train, test
 
+def process_climate_fever():
+    pass
+
 def process_selfaware(save=True, random_seed=42):
     ds = load_dataset("JesusCrist/selfAware")
     train = ds["train"].to_pandas()
@@ -526,16 +529,13 @@ def process_commonsenseqa():
     def proc_df(df):
         df["choices"] = df["choices"].apply(lambda x: x["text"].tolist())
         df["answer"] = df["answerKey"]
+        df["idx"] = df.index
         return df[["question", "choices", "answer"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["validation"].to_pandas())
-    test = proc_df(ds["test"].to_pandas())
-    train_df = pd.concat([train, valid], ignore_index=True).reset_index(drop=True)
-    train_df["idx"] = train_df.index
-    test["idx"] = test.index
-    train_df.to_csv(f"{data_dir}/base/commonsenseqa_train.csv", index=False)
-    test.to_csv(f"{data_dir}/base/commonsenseqa_test.csv", index=False)
-    return train_df, test
+    train.to_csv(f"{data_dir}/base/commonsenseqa_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/base/commonsenseqa_test.csv", index=False)
+    return train, valid
 
 def process_openbookqa():
     ds = load_dataset("allenai/openbookqa", "main")
@@ -559,16 +559,14 @@ def process_qasc():
     def proc_df(df):
         df["choices"] = df["choices"].apply(lambda x: x["text"].tolist())
         df["answer"] = df["answerKey"]
+        df["idx"] = df.index
         return df[["question", "choices", "answer"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["validation"].to_pandas())
-    test = proc_df(ds["test"].to_pandas())
-    train_df = pd.concat([train, valid], ignore_index=True).reset_index(drop=True)
-    train_df["idx"] = train_df.index
-    test["idx"] = test.index
-    train_df.to_csv(f"{data_dir}/base/qasc_train.csv", index=False)
-    test.to_csv(f"{data_dir}/base/qasc_test.csv", index=False)
-    return train_df, test
+    train.to_csv(f"{data_dir}/base/qasc_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/base/qasc_test.csv", index=False)
+    return train, valid
+    
 
 def process_hellaswag(random_seed=42, save=True):
     ds = load_dataset("AlekseyKorshuk/hellaswag")
@@ -611,8 +609,11 @@ def process_bigbenchhard(random_seed=42, save=True):
         else:
             df["answer"] = df["target"]
         df["subset"] = subset
-        if "Options: " in df["text"][0] and (subset in mcqs or subset in binary):
-            df["question"] = df["text"].apply(lambda x: x.split("Options: ")[0])
+        if subset in mcqs or subset in binary:
+            if "Options: " in df["text"][0]:
+                df["question"] = df["text"].apply(lambda x: x.split("Options: ")[0])
+            else:
+                df["question"] = df["text"]
             if subset in binary:
                 all_options = df["answer"].unique().tolist()
                 df["choices"] = all_options
@@ -988,6 +989,8 @@ class Confidence:
             train = pd.read_csv(f"{data_dir}/base/{name}_train.csv")
             valid = pd.read_csv(f"{data_dir}/base/{name}_test.csv")
         def proc_df(df):
+            nan_cols = df[["idx", question_column, "choices", "answer"]].isna().any(axis=1)
+            df = df[~nan_cols].reset_index(drop=True)
             if not isinstance(df.loc[0, "choices"], list):
                 df["choices"] = df["choices"].apply(eval)
             if not isinstance(df.loc[0, "answer"], str):
@@ -1033,8 +1036,8 @@ class Confidence:
     
     def setup_piqa(self, k=2, save=True, random_seed=42):
         # TODO: Eval fails here
-        train, valid = self.setupstandard("piqa", question_column="prompt", save=False, random_seed=random_seed, k=k)
-        train, valid = self.setupstandard("piqa", question_column="prompt", save=save, random_seed=random_seed, k=k, force_total=2)
+        train, valid = self.setupstandard("piqa", question_column="goal", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("piqa", question_column="goal", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_arc(self, k=2, save=True, random_seed=42):
@@ -1076,7 +1079,10 @@ class Confidence:
         train, valid = self.setupstandard("bigbenchhard_mcq", question_column="text", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
 
-    
+    def setup_truthfulqa(self, k=2, save=True, random_seed=42):
+        train, valid = self.setupstandard("truthfulqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("truthfulqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
+        return train, valid
 
 
 def process_batch(batch_nos):
@@ -1119,6 +1125,7 @@ def process_batch(batch_nos):
         process_qasc()
         process_hellaswag()
         process_bigbenchhard()
+        process_truthfulqa()
 
 
 
