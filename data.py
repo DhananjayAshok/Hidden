@@ -12,6 +12,19 @@ def remove_urls(text):
     return cleaned_text
 
 data_dir = os.environ["DATA_DIR"]
+maximum_train_size = 5000 # Will never save more than this number of training examples
+global_random_seed = 42
+np.random.seed(global_random_seed)
+
+def save_dfs(train, valid, dataset_name, taskname):
+    if not os.path.exists(f"{data_dir}/{taskname}/"):
+        os.makedirs(f"{data_dir}/{taskname}/")
+    if maximum_train_size is not None:
+        if len(train) > maximum_train_size:
+            train = train.sample(n=maximum_train_size, random_state=global_random_seed).reset_index(drop=True)
+    train.to_csv(f"{data_dir}/{taskname}/{dataset_name}_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/{taskname}/{dataset_name}_test.csv", index=False)
+
 
 
 def process_nytimes(random_seed=42, save=True):
@@ -623,14 +636,6 @@ def process_bigbenchhard(random_seed=42, save=True):
             train_df.to_csv(f"{data_dir}/base/bigbenchhard_{kind}_train.csv", index=False)
             test_df.to_csv(f"{data_dir}/base/bigbenchhard_{kind}_test.csv", index=False)
     return train_df, test_df
-
-
-
-def save_dfs(train, valid, dataset_name, taskname):
-    if not os.path.exists(f"{data_dir}/{taskname}/"):
-        os.makedirs(f"{data_dir}/{taskname}/")
-    train.to_csv(f"{data_dir}/{taskname}/{dataset_name}_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/{taskname}/{dataset_name}_test.csv", index=False)
 
 class ToxicityAvoidance:
     taskname = "toxicity_avoidance"
