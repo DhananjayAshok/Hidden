@@ -4,6 +4,7 @@ import numpy as np
 import os
 from tqdm import tqdm
 import re
+import warnings
 
 def remove_urls(text):
     # Regular expression pattern to match URLs
@@ -106,8 +107,26 @@ def process_healthver():
     test.to_csv(f"{data_dir}/base/healthver_test.csv", index=False)
     return train, test
 
-def process_climate_fever():
-    pass
+def process_climate_fever(random_seed=42, save=True):
+    ds = load_dataset("tdiggelm/climate_fever")
+    df = ds["test"].to_pandas()
+    def accumilate_evidence(evidence_list):
+        complete_evidence = ""
+        for evidence in evidence_list:
+            complete_evidence = complete_evidence + " " + evidence["evidence"]
+        return complete_evidence
+    df["evidence"] = df["evidences"].apply(accumilate_evidence)
+    df["text"] = "Evidence: " + df["evidence"] + "\nClaim: " + df["claim"]
+    df["unanswerable"] = df["label"] == 2
+    train = df.sample(frac=0.8, random_state=random_seed)
+    valid = df.drop(train.index).reset_index(drop=True)
+    train = train.reset_index(drop=True)
+    train["idx"] = train.index
+    valid["idx"] = valid.index
+    if save:
+        train.to_csv(f"{data_dir}/base/climate_fever_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/base/climate_fever_test.csv", index=False)
+
 
 def process_selfaware(save=True, random_seed=42):
     ds = load_dataset("JesusCrist/selfAware")
@@ -586,7 +605,7 @@ def process_hellaswag(random_seed=42, save=True):
         test.to_csv(f"{data_dir}/base/hellaswag_test.csv", index=False)
 
 def process_bigbenchhard(random_seed=42, save=True):
-    subsets = ['boolean_expressions', 'causal_judgement', 'date_understanding', 'disambiguation_qa', 'dyck_languages', 'formal_fallacies', 'geometric_shapes', 'hyperbaton', 'logical_deduction_five_objects', 'logical_deduction_seven_objects', 'logical_deduction_three_objects', 'movie_recommendation', 'multistep_arithmetic_two', 'navigate', 'object_counting', 'penguins_in_a_table', 'reasoning_about_colored_objects', 'ruin_names', 'salient_translation_error_detection', 'snarks', 'sports_understanding', 'temporal_sequences', 'tracking_shuffled_objects_five_objects', 'tracking_shuffled_objects_seven_objects', 'tracking_shuffled_objects_three_objects', 'web_of_lies']
+    subsets = ['boolean_expressions', 'causal_judgement', 'date_understanding', 'disambiguation_qa', 'formal_fallacies', 'geometric_shapes', 'hyperbaton', 'logical_deduction_five_objects', 'logical_deduction_seven_objects', 'logical_deduction_three_objects', 'movie_recommendation', 'multistep_arithmetic_two', 'navigate', 'object_counting', 'penguins_in_a_table', 'reasoning_about_colored_objects', 'ruin_names', 'salient_translation_error_detection', 'snarks', 'sports_understanding', 'temporal_sequences', 'tracking_shuffled_objects_five_objects', 'tracking_shuffled_objects_seven_objects', 'tracking_shuffled_objects_three_objects', 'web_of_lies']
     # mcq is date_und, disamb, geometric, hyperbaton, logicals, movie_reco, penguins, reasoning, ruin, salient, snarks, temporal, shuffled
     mcqs = ["date_understanding", "disambiguation_qa", "geometric_shapes", "hyperbaton", "logical_deduction_five_objects", "logical_deduction_seven_objects", "logical_deduction_three_objects", "movie_recommendation", "penguins_in_a_table", "reasoning_about_colored_objects", "ruin_names", "salient_translation_error_detection", "snarks", "temporal_sequences", "tracking_shuffled_objects_five_objects", "tracking_shuffled_objects_seven_objects", "tracking_shuffled_objects_three_objects"]
     numerical = ["multistep_arithmetic_two", "object_counting"]
@@ -603,6 +622,10 @@ def process_bigbenchhard(random_seed=42, save=True):
     for subset in subsets:
         ds = load_dataset("maveriq/bigbenchhard", subset) # there are exactly 250 examples per subset, 200 for test rest train
         df = ds["train"].to_pandas()
+        if subset == "movie_recommendation":
+            df = df[df["target"] != "Monsters, Inc"].reset_index(drop=True)
+        if subset == "ruin_names":
+            df = df[df["target"] != "dearth, wind, & fire"].reset_index(drop=True)
         df["text"] = df["input"]
         if isinstance(df["target"][0], str):
             df["answer"] = df["target"].apply(lambda x: x.strip("()"))
@@ -610,17 +633,17 @@ def process_bigbenchhard(random_seed=42, save=True):
             df["answer"] = df["target"]
         df["subset"] = subset
         if subset in mcqs or subset in binary:
-            if "Options: " in df["text"][0]:
-                df["question"] = df["text"].apply(lambda x: x.split("Options: ")[0])
+            if "Options:" in df["text"][0]:
+                df["question"] = df["text"].apply(lambda x: x.split("Options:")[0])
             else:
                 df["question"] = df["text"]
             if subset in binary:
                 all_options = df["answer"].unique().tolist()
-                df["choices"] = all_options
+                df["choices"] = str(all_options)
                 df["answer"] = df["target"].apply(lambda x: all_options.index(x))
             else:
-                df["choices"] = get_choices(df["text"].apply(lambda x: x.split("Options: ")[1]))
-                df["answer"] = letter_to_int(df["answer"])
+                df["choices"] = df["text"].apply(lambda x: get_choices(x.split("Options:")[1]))
+                df["answer"] = df["answer"].apply(letter_to_int)
         train_df = df.sample(n=50, random_state=random_seed)
         test_df = df.drop(train_df.index).reset_index(drop=True)
         train_df = train_df.reset_index(drop=True)
@@ -652,7 +675,7 @@ def process_truthfulqa(random_seed=42, save=True):
     ds = load_dataset("truthfulqa/truthful_qa", "multiple_choice")
     train = ds["validation"].to_pandas()
     train["choices"] = train["mc1_targets"].apply(lambda x: x["choices"].tolist())
-    train["answer"] = train["mc1_targets"].apply(lambda x: x["labels"].index(1))
+    train["answer"] = train["mc1_targets"].apply(lambda x: x["labels"].tolist().index(1))
     train_df = train.sample(frac=0.2, random_state=random_seed)
     valid = train.drop(train_df.index).reset_index(drop=True)
     train_df = train_df.reset_index(drop=True)
@@ -968,7 +991,8 @@ def randomize_choices(choices, answer, force_total=None):
             #print(f"Warning: {choice} is repeated in {choices}")
             pass
     if force_total is not None:
-        assert len(choices) >= force_total
+        if len(choices) < force_total:
+            warnings.warn(f"Warning: {len(choices)} choices is less than {force_total}")
         remaining = [x for x in choices if x != answer_text]
         np.random.shuffle(remaining)
         choices = [answer_text]
@@ -1025,43 +1049,43 @@ class Confidence:
         return train, valid
 
     def setup_mmlu(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subject", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subject", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("mmlu", question_column="question", subset_col="subject", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_cosmoqa(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("cosmoqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("cosmoqa", question_column="question", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("cosmoqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_piqa(self, k=2, save=True, random_seed=42):
         # TODO: Eval fails here
-        train, valid = self.setupstandard("piqa", question_column="goal", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("piqa", question_column="goal", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("piqa", question_column="goal", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_arc(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("arc", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("arc", question_column="question", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("arc", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_medmcqa(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("medmcqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("medmcqa", question_column="question", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("medmcqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_commonsenseqa(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("commonsenseqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("commonsenseqa", question_column="question", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("commonsenseqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_openbookqa(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("openbookqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("openbookqa", question_column="question", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("openbookqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_qasc(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("qasc", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("qasc", question_column="question", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("qasc", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
@@ -1070,17 +1094,17 @@ class Confidence:
         valid = pd.read_csv(f"{data_dir}/base/hellaswag_test.csv")
         train["question"] = "Which of the following continuations to the text are the most appropriate? \nText: " + train["text"]
         valid["question"] = "Which of the following continuations to the text are the most appropriate? \nText: " + valid["text"]
-        self.setupstandard("hellaswag", question_column="text", save=False, random_seed=random_seed, k=k)
+        self.setupstandard("hellaswag", question_column="text", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("hellaswag", question_column="text", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
     
     def setup_bigbenchhard(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("bigbenchhard_mcq", question_column="text", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("bigbenchhard_mcq", question_column="text", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("bigbenchhard_mcq", question_column="text", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
 
     def setup_truthfulqa(self, k=2, save=True, random_seed=42):
-        train, valid = self.setupstandard("truthfulqa", question_column="question", save=False, random_seed=random_seed, k=k)
+        train, valid = self.setupstandard("truthfulqa", question_column="question", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("truthfulqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
 
@@ -1179,6 +1203,7 @@ def setup_batch(batch_nos):
         confidence.setup_qasc()
         confidence.setup_hellaswag()
         confidence.setup_bigbenchhard()
+        confidence.setup_truthfulqa()
 
 
 
