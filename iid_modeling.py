@@ -16,7 +16,13 @@ data_dir = os.getenv("DATA_DIR")
 def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, task_offset=0, random_seed=42):
     assert split in ["train", "test"]
     hidden_states_dir = f"{results_dir}/{model_save_name}/{task}/"
-    df = pd.read_csv(f"{results_dir}/{model_save_name}/{task}/{dataset}_{split}_inference.csv")
+    try:
+        df = pd.read_csv(f"{results_dir}/{model_save_name}/{task}/{dataset}_{split}_inference.csv")
+    except:
+        if "indosentiment" in dataset:
+            df = pd.read_csv(f"{results_dir}/{model_save_name}/{task}/{dataset}_{split}_inference.csv", lineterminator="\n")
+        else:
+            raise ValueError(f"Could not find {dataset}_{split}_inference.csv in {results_dir}/{model_save_name}/{task}/")
     if "label" not in df.columns:
         raise ValueError(f"Label column not found in {dataset}_{split}_inference.csv with columns {df.columns}. You probably need to run either evaluate.py or metrics.py to add a label column. If thats not the issue rip bro. ")
     available_indices = [int(f) for f in os.listdir(f"{hidden_states_dir}/{split}/{dataset}/")]
@@ -75,7 +81,7 @@ def main(task, dataset, model_save_name, prediction_dir, random_sample_train, ra
     X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test, task_offset=task_offset, random_seed=random_seed)
     model = get_model(model_kind)
     train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test)
-    print(f"Final Test Accuracy: {test_accuracy}")
+    #print(f"Final Test Accuracy: {test_accuracy}")
     if prediction_dir is not None:
         train_df["probe_prediction"] = train_pred
         test_df["probe_prediction"] = test_pred
