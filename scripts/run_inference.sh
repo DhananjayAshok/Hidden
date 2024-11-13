@@ -1,5 +1,5 @@
-task="sentiment"
-datasets=("amazonreviews" "yelp" "twitterfinance" "twittermteb" "auditorsentiment" "fiqa" "indosentiment_eng" "newsmtc" "imdb" "financial_phrasebank" "dair_emotion" "sst5")
+task="confidence"
+datasets=("mmlu" "cosmoqa" "piqa" "arc" "medmcqa" "commonsenseqa" "openbookqa" "qasc" "hellaswag" "bigbenchhard_mcq" "truthfulqa")
 splits=("train" "test")
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 

@@ -1,13 +1,12 @@
 declare -A tasks_and_datasets=(
-    ["confidence"]="mmlu"
+    ["confidence"]="mmlu cosmoqa piqa arc medmcqa commonsenseqa openbookqa qasc hellaswag bigbenchhard_mcq truthfulqa"
     ["unanswerable"]="squad healthver qnota selfaware known_unknown"
     ["sentiment"]="amazonreviews yelp twitterfinance twittermteb auditorsentiment fiqa indosentiment_eng newsmtc imdb financial_phrasebank dair_emotion sst5"
-    ["toxicity_avoidance"]="real_toxicity_prompts toxic_chat"
 )
 model_name="meta-llama/Llama-3.1-8B-Instruct"
 random_seed=42
 random_sample_train=2000
-random_sample_test=2000
+random_sample_test=10000000
 model_kind="linear"
 
 source proj_params.sh
