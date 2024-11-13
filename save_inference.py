@@ -41,7 +41,11 @@ def main(model_name, data_path, output_csv_path, output_hidden_dir, save_every, 
         num_hidden = config.num_hidden_layers
         track_layers = [int(0.65*num_hidden)]
     set_tracking_config(config, track_layers=track_layers, track_mlp=track_mlp, track_attention=track_attention, track_projection=track_projection)
-    data_df = pd.read_csv(data_path)
+    try:
+        data_df = pd.read_csv(data_path)
+    except:
+        assert "indosentiment" in data_path
+        data_df = pd.read_csv(data_path, lineterminator="\n")
     assert "text" in data_df.columns
     data_df["output"] = None
     model = AutoModelForCausalLM.from_pretrained(model_name, config=config, device_map="auto")
