@@ -777,7 +777,7 @@ def process_truthfulqa(random_seed=42, save=True):
         train_df.to_csv(f"{data_dir}/base/truthfulqa_train.csv", index=False)
         valid.to_csv(f"{data_dir}/base/truthfulqa_test.csv", index=False)
     ds = load_dataset("truthfulqa/truthful_qa", "generation")
-    train = ds["validation"].to_pandas()
+    df = ds["validation"].to_pandas()
     def proc_df(df):
         data = []
         columns = ["question", "claim", "label"]
@@ -792,8 +792,8 @@ def process_truthfulqa(random_seed=42, save=True):
         df = pd.DataFrame(data, columns=columns)
         df["idx"] = df.index
         return df
-    train = train.sample(frac=0.2, random_state=random_seed)
-    valid = train.drop(train.index).reset_index(drop=True)
+    train = df.sample(frac=0.2, random_state=random_seed)
+    valid = df.drop(train.index).reset_index(drop=True)
     train = proc_df(train)
     valid = proc_df(valid)
     if save:
