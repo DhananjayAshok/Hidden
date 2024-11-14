@@ -23,13 +23,17 @@ maximum_train_size = 5000 # Will never save more than this number of training ex
 global_random_seed = 42
 np.random.seed(global_random_seed)
 
-def save_dfs(train, valid, dataset_name, taskname, prompt_task=None):
+def save_dfs(train, valid, dataset_name, taskname, prompt_task=None, dropnan_cols=None):
     if prompt_task is None:
         prompt_task = ""
     else:
         prompt_task = "_"+prompt_task
     if not os.path.exists(f"{data_dir}/{taskname}/"):
         os.makedirs(f"{data_dir}/{taskname}/")
+    if dropnan_cols is not None:
+        nan_cols = train[dropnan_cols].isna().any(axis=1)
+        train = train[~nan_cols].reset_index(drop=True)
+        valid = valid[~valid[dropnan_cols].isna().any(axis=1)].reset_index(drop=True)
     if maximum_train_size is not None:
         if len(train) > maximum_train_size:
             train = train.sample(n=maximum_train_size, random_state=global_random_seed).reset_index(drop=True)
@@ -439,7 +443,7 @@ def process_dair_emotion():
     valid = ds["validation"].to_pandas()
     test = ds["test"].to_pandas()
     def proc_df(df):
-        df["label"] = df["label"].isin(['joy', 'love'])
+        df["label"] = df["label"].isin([1, 2])
         return df[["text", "label"]]
     train = proc_df(train)
     valid = proc_df(valid)
@@ -1035,7 +1039,6 @@ class Sentiment:
             return df[["idx", "text", "label"]]
         train = proc_df(train)
         valid = proc_df(valid)
-        prompt_task = "_"+prompt_task if prompt_task is not None else ""
         if save:
             save_dfs(train, valid, name, self.taskname, prompt_task)
         return train, valid
@@ -1296,7 +1299,7 @@ class Truthfullness:
         train = proc_df(train)
         valid = proc_df(valid)
         if save:
-            save_dfs(train, valid, "averitec", self.taskname, prompt_task)
+            save_dfs(train, valid, "averitec", self.taskname, prompt_task, dropnan_cols=["idx", "text", "label"])
         return train, valid
     
     def setup_fever(self, save=True, prompt_task=None):
@@ -1335,7 +1338,7 @@ class Truthfullness:
         train = proc_df(train)
         valid = proc_df(valid)
         if save:
-            save_dfs(train, valid, "truthfulqa_gen", self.taskname, prompt_task)
+            save_dfs(train, valid, "truthfulqa_gen", self.taskname, prompt_task, dropnan_cols=["idx", "text", "label"])
         return train, valid
 
 
@@ -1467,5 +1470,8 @@ def setup_all():
 
 
 if __name__ == "__main__":
-    process_batch([3])
-    setup_batch([3])
+    #process_batch([3])
+    #setup_batch([3])
+    t = Truthfullness()
+    t.setup_averitec()
+    t.setup_truthfulqa()
