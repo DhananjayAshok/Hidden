@@ -172,6 +172,7 @@ def process_felm(random_seed=42, save=True):
         ds = load_dataset("hkust-nlp/felm", subset)
         def proc_df(df):
             df["text"] = df["prompt"] + " "+ df["response"]
+            df['labels'] = df['labels'].apply(lambda x: x.tolist())
             return df
         train = proc_df(ds["test"].to_pandas())
         train_df = train.sample(frac=0.2, random_state=random_seed)
@@ -1254,6 +1255,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/felm_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/felm_test.csv")
         def proc_df(df):
+            df['labels'] = df['labels'].apply(eval)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["text"]
             df['label'] = df['labels'].apply(all).astype(int)
             return df[["idx", "text", "label"]]
