@@ -16,7 +16,7 @@ for dataset in "${datasets[@]}"
 do
     for split in "${splits[@]}"
     do
-
+        echo "XXXXXXXXXXXXXXXX $dataset $split XXXXXXXXXXXXXXXX"
         filename="$RESULTS_DIR/$model_name/$task/${dataset}_${split}_inference.csv"
         python score_gen.py --file $filename --reference_column $reference_column --output_column $output_column --use_prompt $use_prompt --metric_name $metric_name
     done 

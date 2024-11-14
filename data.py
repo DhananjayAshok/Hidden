@@ -794,12 +794,13 @@ def process_truthfulqa(random_seed=42, save=True):
         return df
     train = df.sample(frac=0.2, random_state=random_seed)
     valid = df.drop(train.index).reset_index(drop=True)
+    train = train.reset_index(drop=True)
     train = proc_df(train)
     valid = proc_df(valid)
     if save:
         train.to_csv(f"{data_dir}/base/truthfulqa_gen_train.csv", index=False)
         valid.to_csv(f"{data_dir}/base/truthfulqa_gen_test.csv", index=False)
-    return train_df, valid  
+    return train, valid  
 
 #endregion
 
@@ -1393,7 +1394,7 @@ def process_batch(batch_nos):
 
 
 def process_all():
-    process_batch([0, 1, 2])
+    process_batch([0, 1, 2, 3])
     return
 
 
@@ -1460,7 +1461,7 @@ def setup_batch(batch_nos):
 
 
 def setup_all():
-    setup_batch([0, 1, 2])
+    setup_batch([0, 1, 2, 3])
     return
 
 

@@ -82,6 +82,10 @@ def get_metric_class(metric_name):
         return StringMatch()
     if metric_name == "matchcot":
         return StringMatch(cot=True)
+    if metric_name == "mcqmatch":
+        return MCQStringMatch()
+    if metric_name == "mcqmatchcot":
+        return MCQStringMatch(cot=True)
     if metric_name == "unanswerable":
         return UnanswerablePseudoLabel(prompt_engine)
     raise ValueError(f"Metric {metric_name} not found")
@@ -142,6 +146,7 @@ class HallucinationDetector:
                 all_scores.append(scores[1])
         return all_scores
 
+
 class StringMatch:
     def __init__(self, cot=False):
         self.cot = cot
@@ -149,7 +154,7 @@ class StringMatch:
     def __call__(self, texts, labels, filehash=None):
         scores = []
         check_fn = self.cot_check if self.cot else self.normal_check
-        for text, label in zip(texts, labels):
+        for text, label in tqdm(zip(texts, labels), total=len(texts)):
             scores.append(check_fn(text, label))
         return scores
     
@@ -173,6 +178,24 @@ class StringMatch:
         if prediction is None or label is None:
             return None
         return prediction.lower().strip() == label.lower().strip()
+
+class MCQStringMatch(StringMatch):
+    def __init__(self, cot=False):
+        super().__init__(cot=cot)
+        self.label_map_dict = {"A": "1", "B": "2", "C": "3", "D": "4", "E": "5", "F": "6", "G": "7", "H": "8", "I": "9", "J": "10"}
+
+    def __call__(self, texts, labels, filehash=None):
+        scores = []
+        check_fn = self.cot_check if self.cot else self.normal_check
+        for text, label in tqdm(zip(texts, labels), total=len(texts)):
+            op1 = check_fn(text, label)
+            if label in self.label_map_dict:
+                op2 = check_fn(text, self.label_map_dict[label])
+            else:
+                op2 = False
+            scores.append(op1 or op2)
+        return scores
+
 
 
 class PromptHolder:
