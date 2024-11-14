@@ -1,5 +1,5 @@
 task="unanswerable"
-datasets=("squad" "healthver" "qnota" "selfaware" "known_unknown")
+datasets=("squad" "healthver" "qnota" "selfaware" "known_unknown" "climatefever")
 
 task="toxicity_avoidance"
 datasets=("real_toxicity_prompts" "toxic_chat")
@@ -9,3 +9,6 @@ datasets=("amazonreviews" "yelp" "twitterfinance" "twittermteb" "auditorsentimen
 
 task="confidence"
 datasets=("mmlu" "cosmoqa" "piqa" "arc" "medmcqa" "commonsenseqa" "openbookqa" "qasc" "hellaswag" "bigbenchhard_mcq" "truthfulqa")
+
+task="truthfullness"
+datasets=("felm" "healthver" "climatefever" "averitec" "fever" "factool" "truthfulqa_gen")

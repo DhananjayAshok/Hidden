@@ -127,6 +127,7 @@ def process_climate_fever(random_seed=42, save=True):
         return complete_evidence
     df["evidence"] = df["evidences"].apply(accumilate_evidence)
     df["text"] = "Evidence: " + df["evidence"] + "\nClaim: " + df["claim"]
+    df["label"] = df["claim_label"]
     df["unanswerable"] = df["label"] == 2
     train = df.sample(frac=0.8, random_state=random_seed)
     valid = df.drop(train.index).reset_index(drop=True)
@@ -134,8 +135,8 @@ def process_climate_fever(random_seed=42, save=True):
     train["idx"] = train.index
     valid["idx"] = valid.index
     if save:
-        train.to_csv(f"{data_dir}/base/climate_fever_train.csv", index=False)
-        valid.to_csv(f"{data_dir}/base/climate_fever_test.csv", index=False)
+        train.to_csv(f"{data_dir}/base/climatefever_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/base/climatefever_test.csv", index=False)
 
 def process_factool(random_seed=42, save=True):
     def proc_df(df):
@@ -775,6 +776,29 @@ def process_truthfulqa(random_seed=42, save=True):
     if save:
         train_df.to_csv(f"{data_dir}/base/truthfulqa_train.csv", index=False)
         valid.to_csv(f"{data_dir}/base/truthfulqa_test.csv", index=False)
+    ds = load_dataset("truthfulqa/truthful_qa", "generation")
+    train = ds["validation"].to_pandas()
+    def proc_df(df):
+        data = []
+        columns = ["question", "claim", "label"]
+        for i, row in df.iterrows():
+            question = row["question"]
+            correct_claims = row["correct_answers"]
+            incorrect_claims = row["incorrect_answers"]
+            for claim in correct_claims:
+                data.append([question, claim, 1])
+            for claim in incorrect_claims:
+                data.append([question, claim, 0])
+        df = pd.DataFrame(data, columns=columns)
+        df["idx"] = df.index
+        return df
+    train = train.sample(frac=0.2, random_state=random_seed)
+    valid = train.drop(train.index).reset_index(drop=True)
+    train = proc_df(train)
+    valid = proc_df(valid)
+    if save:
+        train.to_csv(f"{data_dir}/base/truthfulqa_gen_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/base/truthfulqa_gen_test.csv", index=False)
     return train_df, valid  
 
 #endregion
@@ -782,11 +806,37 @@ def process_truthfulqa(random_seed=42, save=True):
 
 # Hallucination
 #region
-def process_ragtruth():
-    raise NotImplementedError
+def process_ragtruth(random_seed=42, save=True):
+    df = pd.read_json(f"{data_dir}/raw/ragtruth/source_info.jsonl", lines=True)
+    def proc_df(df):
+        df["text"] = df["prompt"]
+        df["idx"] = df.index
+        return df
+    train = df.sample(frac=0.85, random_state=random_seed)
+    valid = df.drop(train.index).reset_index(drop=True)
+    train = train.reset_index(drop=True)
+    train = proc_df(train)
+    valid = proc_df(valid)
+    if save:
+        train.to_csv(f"{data_dir}/base/ragtruth_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/base/ragtruth_test.csv", index=False)
+    return train, valid
 
-def process_faithbench():
-    raise NotImplementedError
+
+def process_faithbench(random_seed=42, save=True):
+    df = pd.read_csv(f"{data_dir}/raw/faithbench/FaithBench.csv")
+    df = df[["source"]]
+    df = df.drop_duplicates().reset_index(drop=True)
+    df.rename(columns={"source": "text"}, inplace=True)
+    train = df.sample(frac=0.25, random_state=random_seed)
+    valid = df.drop(train.index).reset_index(drop=True)
+    train = train.reset_index(drop=True)
+    train["idx"] = train.index
+    valid["idx"] = valid.index
+    if save:
+        train.to_csv(f"{data_dir}/base/faithbench_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/base/faithbench_test.csv", index=False)
+    return train, valid
 
 #endregion
 
@@ -1274,6 +1324,18 @@ class Truthfullness:
             save_dfs(train, valid, "factool", self.taskname, prompt_task)
         return train, valid
     
+    def setup_truthfulqa(self, save=True, prompt_task=None):
+        train = pd.read_csv(f"{data_dir}/base/truthfulqa_gen_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/truthfulqa_gen_test.csv")
+        def proc_df(df):
+            df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["question"] + " " + df["claim"]
+            df['label'] = df['label'].astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "truthfulqa_gen", self.taskname, prompt_task)
+        return train, valid
 
 
 
@@ -1324,6 +1386,8 @@ def process_batch(batch_nos):
         process_fever()
         process_averitec()
         process_factool()
+        process_ragtruth()
+        process_faithbench()
 
 
 
@@ -1388,6 +1452,7 @@ def setup_batch(batch_nos):
         truthfulness.setup_averitec()
         truthfulness.setup_fever()
         truthfulness.setup_factool()
+        truthfulness.setup_truthfulqa()
     return
 
 
