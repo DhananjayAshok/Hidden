@@ -56,28 +56,29 @@ def do_iid_probe(base_path, report_file):
                         continue
                     for file in file_options:
                         filedata = file.split(".")[0].split("-")
+                        filepath = os.path.join(base_path, model_save_name, task, dataset, model_kind, file)
                         assert "train" in filedata[0] and "test" in filedata[1] and "seed" in filedata[2] and len(filedata) == 3
                         # all iid format train_${random_sample_train}-test_${random_sample_test}-seed_${random_seed}.log
                         n_train = int(filedata[0].split("_")[1])
                         n_test = int(filedata[1].split("_")[1])
                         random_seed = int(filedata[2].split("_")[1])
                         # read the file and get all lines. search for Final Test Accuracy: pattern and get all instances of it
-                        with open(os.path.join(base_path, model_save_name, task, dataset, model_kind, file), "r") as f:
+                        with open(filepath, "r") as f:
                             lines = f.readlines()
                         accuracies = [float(line.split(": ")[1]) for line in lines if "Final Test Accuracy: " in line]
                         if len(accuracies) == 0:
-                            warnings.warn(f"No accuracies found in {file}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
+                            warnings.warn(f"No accuracies found in {filepath}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
                             continue
                         if len(accuracies) > 1:
-                            warnings.warn(f"Multiple accuracies found in {file}. Using the last one ...")
+                            warnings.warn(f"Multiple accuracies found in {filepath}. Using the last one ...")
                         accuracy = accuracies[-1]
                         # get the base rate of the test set, it is in a line in the format Base rate: {y_train.mean()} (Train), {y_test.mean()} (Test)
                         base_rate_lines = [line for line in lines if "Base rate: " in line]
                         if len(base_rate_lines) == 0:
-                            warnings.warn(f"No base rate found in {file}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
+                            warnings.warn(f"No base rate found in {filepath}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
                             continue
                         if len(base_rate_lines) > 1:
-                            warnings.warn(f"Multiple base rates found in {file}. Using the last one ...")
+                            warnings.warn(f"Multiple base rates found in {filepath}. Using the last one ...")
                         base_rate_str = base_rate_lines[-1].split(",")[1].split("(")[0].strip()
                         base_rate = float(base_rate_str)
                         # now try to open the train and test files and check whether it has n_train and n_test points

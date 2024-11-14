@@ -23,16 +23,22 @@ maximum_train_size = 5000 # Will never save more than this number of training ex
 global_random_seed = 42
 np.random.seed(global_random_seed)
 
-def save_dfs(train, valid, dataset_name, taskname):
+def save_dfs(train, valid, dataset_name, taskname, prompt_task=None):
+    if prompt_task is None:
+        prompt_task = ""
+    else:
+        prompt_task = "_"+prompt_task
     if not os.path.exists(f"{data_dir}/{taskname}/"):
         os.makedirs(f"{data_dir}/{taskname}/")
     if maximum_train_size is not None:
         if len(train) > maximum_train_size:
             train = train.sample(n=maximum_train_size, random_state=global_random_seed).reset_index(drop=True)
-    train.to_csv(f"{data_dir}/{taskname}/{dataset_name}_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/{taskname}/{dataset_name}_test.csv", index=False)
+    train.to_csv(f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_test.csv", index=False)
 
 
+# News Topic
+#region
 
 def process_nytimes(random_seed=42, save=True):
     df = pd.read_json(f"{data_dir}/raw/nytimes/nytimes_dataset.json")
@@ -67,6 +73,10 @@ def process_bbcnews():
     train.to_csv(f"{data_dir}/base/bbcnews_train.csv", index=False)
     test.to_csv(f"{data_dir}/base/bbcnews_test.csv", index=False)
 
+#endregion
+
+# Unanswerable, Fact Verification and Truth
+#region
 
 def process_squad():
     ds = load_dataset("rajpurkar/squad_v2")
@@ -127,6 +137,80 @@ def process_climate_fever(random_seed=42, save=True):
         train.to_csv(f"{data_dir}/base/climate_fever_train.csv", index=False)
         valid.to_csv(f"{data_dir}/base/climate_fever_test.csv", index=False)
 
+def process_factool(random_seed=42, save=True):
+    def proc_df(df):
+        data = []
+        columns = ["claim", "label"]
+        for i, row in df.iterrows():
+            claims_w_label = row["claims"]
+            for claim_w_label in claims_w_label:
+                data.append([claim_w_label["claim"], claim_w_label["label"]])
+        df = pd.DataFrame(data, columns=columns)
+        df["text"] = df["claim"]
+        df["idx"] = df.index
+        return df
+    total = pd.read_json(f"{data_dir}/raw/factool/knowledge_qa.jsonl", lines=True)
+    train = total.sample(frac=0.2, random_state=random_seed)
+    valid = total.drop(train.index).reset_index(drop=True)
+    train = train.reset_index(drop=True)
+    train = proc_df(train)
+    valid = proc_df(valid)
+    if save:
+        train.to_csv(f"{data_dir}/base/factool_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/base/factool_test.csv", index=False)
+    return train, valid
+
+def process_felm(random_seed=42, save=True):
+    train_dfs = []
+    valid_dfs = []
+    for subset in ["wk", "science"]:
+        ds = load_dataset("hkust-nlp/felm", subset)
+        def proc_df(df):
+            df["text"] = df["prompt"] + " "+ df["response"]
+            return df
+        train = proc_df(ds["test"].to_pandas())
+        train_df = train.sample(frac=0.2, random_state=random_seed)
+        valid = train.drop(train_df.index).reset_index(drop=True)
+        train_df = train_df.reset_index(drop=True)
+        train_df["idx"] = train_df.index
+        valid["idx"] = valid.index
+        train_dfs.append(train_df)
+        valid_dfs.append(valid)
+    train_df = pd.concat(train_dfs, ignore_index=True)
+    valid_df = pd.concat(valid_dfs, ignore_index=True)
+    if save:
+        train_df.to_csv(f"{data_dir}/base/felm_train.csv", index=False)
+        valid_df.to_csv(f"{data_dir}/base/felm_test.csv", index=False)
+    return train_df, valid_df
+
+def process_averitec():
+    ds = load_dataset("pminervini/averitec")
+    def proc_df(df):
+        df["idx"] = df.index
+        return df
+    train = proc_df(ds["train"].to_pandas())
+    valid = proc_df(ds["dev"].to_pandas())
+    train.to_csv(f"{data_dir}/base/averitec_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/base/averitec_test.csv", index=False)
+    return train, valid
+
+def process_fever(random_seed=42, save=True):
+    ds = load_dataset("fever/fever", 'v1.0', trust_remote_code=True)
+    train = ds["train"].to_pandas()
+    valid = ds["labelled_dev"].to_pandas()
+    def proc_df(df):
+        df = df.drop_duplicates(subset=["claim"]).reset_index(drop=True)
+        return df
+    train = proc_df(train)
+    valid = proc_df(valid)
+    train = train.sample(frac=0.5, random_state=random_seed)
+    valid = valid.sample(frac=0.6, random_state=random_seed)
+    train["idx"] = train.index
+    valid["idx"] = valid.index
+    if save:
+        train.to_csv(f"{data_dir}/base/fever_train.csv", index=False)
+        valid.to_csv(f"{data_dir}/base/fever_test.csv", index=False)
+    return train, valid
 
 def process_selfaware(save=True, random_seed=42):
     ds = load_dataset("JesusCrist/selfAware")
@@ -159,20 +243,13 @@ def process_known_unkown():
     valid.to_csv(f"{data_dir}/base/known_unknown_test.csv", index=False)
     return train, valid
 
-def process_mmlu():
-    ds = load_dataset("cais/mmlu", "all", split=["test", "validation"])
-    train = ds[1].to_pandas()
-    valid = ds[0].to_pandas()
-    def proc_df(df):
-        df["idx"] = df.index
-        df["choices"]  = df["choices"].apply(lambda x: x.tolist())
-        return df
-    train = proc_df(train)
-    valid = proc_df(valid)
-    train.to_csv(f"{data_dir}/base/mmlu_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/base/mmlu_test.csv", index=False)
-    return train, valid
+def process_qnota():
+    # ambiguous, futuristic, unmeasurable, incorrect
+    columns = ["incomplete_questions", "ambiguous_questions", "futuristic_questions", "unmeasurable_questions", "incorrect_questions"]
+#endregion
 
+# Sentiment and Tone
+#region
 def process_real_toxicity_prompts(save=True, random_seed=42):
     ds = load_dataset("allenai/real-toxicity-prompts")
     df = ds["train"].to_pandas().sample(frac=0.2, random_state=random_seed).reset_index(drop=True)
@@ -200,11 +277,6 @@ def process_toxic_chat():
     valid = proc_df(ds["test"].to_pandas())
     train.to_csv(f"{data_dir}/base/toxic_chat_train.csv", index=False)
     valid.to_csv(f"{data_dir}/base/toxic_chat_test.csv", index=False)
-
-def process_qnota():
-    # ambiguous, futuristic, unmeasurable, incorrect
-    columns = ["incomplete_questions", "ambiguous_questions", "futuristic_questions", "unmeasurable_questions", "incorrect_questions"]
-
 
 def process_amazonreviews(random_seed=32, save=True):
     ds = load_dataset("mteb/amazon_reviews_multi", "en")
@@ -467,6 +539,26 @@ def process_mops(random_seed=42, save=True):
     test.to_csv(f"{data_dir}/base/mops_domain_test.csv", index=False)
     return train, valid
 
+#endregion
+
+# MCQA
+#region
+
+def process_mmlu():
+    ds = load_dataset("cais/mmlu", "all", split=["test", "validation"])
+    train = ds[1].to_pandas()
+    valid = ds[0].to_pandas()
+    def proc_df(df):
+        df["idx"] = df.index
+        df["choices"]  = df["choices"].apply(lambda x: x.tolist())
+        return df
+    train = proc_df(train)
+    valid = proc_df(valid)
+    train.to_csv(f"{data_dir}/base/mmlu_train.csv", index=False)
+    valid.to_csv(f"{data_dir}/base/mmlu_test.csv", index=False)
+    return train, valid
+
+
 def process_cosmoqa():
     ds = load_dataset("allenai/cosmos_qa", trust_remote_code=True)
     def proc_df(df):
@@ -549,7 +641,7 @@ def process_commonsenseqa():
         df["choices"] = df["choices"].apply(lambda x: x["text"].tolist())
         df["answer"] = df["answerKey"]
         df["idx"] = df.index
-        return df[["question", "choices", "answer"]]
+        return df[["idx", "question", "choices", "answer"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["validation"].to_pandas())
     train.to_csv(f"{data_dir}/base/commonsenseqa_train.csv", index=False)
@@ -579,14 +671,13 @@ def process_qasc():
         df["choices"] = df["choices"].apply(lambda x: x["text"].tolist())
         df["answer"] = df["answerKey"]
         df["idx"] = df.index
-        return df[["question", "choices", "answer"]]
+        return df[["idx", "question", "choices", "answer"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["validation"].to_pandas())
     train.to_csv(f"{data_dir}/base/qasc_train.csv", index=False)
     valid.to_csv(f"{data_dir}/base/qasc_test.csv", index=False)
     return train, valid
     
-
 def process_hellaswag(random_seed=42, save=True):
     ds = load_dataset("AlekseyKorshuk/hellaswag")
     def proc_df(df):
@@ -671,7 +762,6 @@ def process_bigbenchhard(random_seed=42, save=True):
             test_df.to_csv(f"{data_dir}/base/bigbenchhard_{kind}_test.csv", index=False)
     return train_df, test_df
 
-
 def process_truthfulqa(random_seed=42, save=True):
     ds = load_dataset("truthfulqa/truthful_qa", "multiple_choice")
     train = ds["validation"].to_pandas()
@@ -687,36 +777,18 @@ def process_truthfulqa(random_seed=42, save=True):
         valid.to_csv(f"{data_dir}/base/truthfulqa_test.csv", index=False)
     return train_df, valid  
 
+#endregion
+
+
+# Hallucination
+#region
 def process_ragtruth():
     raise NotImplementedError
 
 def process_faithbench():
     raise NotImplementedError
 
-
-
-def process_felm(random_seed=42, save=True):
-    train_dfs = []
-    valid_dfs = []
-    for subset in ["wk", "science"]:
-        ds = load_dataset("hkust-nlp/felm", subset)
-        def proc_df(df):
-            df["text"] = df["prompt"] + df["response"]
-            return df
-        train = proc_df(ds["test"].to_pandas())
-        train_df = train.sample(frac=0.2, random_state=random_seed)
-        valid = train.drop(train_df.index).reset_index(drop=True)
-        train_df = train_df.reset_index(drop=True)
-        train_df["idx"] = train_df.index
-        valid["idx"] = valid.index
-        train_dfs.append(train_df)
-        valid_dfs.append(valid)
-    train_df = pd.concat(train_dfs, ignore_index=True)
-    valid_df = pd.concat(valid_dfs, ignore_index=True)
-    if save:
-        train_df.to_csv(f"{data_dir}/base/felm_train.csv", index=False)
-        valid_df.to_csv(f"{data_dir}/base/felm_test.csv", index=False)
-    return train_df, valid_df
+#endregion
 
 
 
@@ -736,7 +808,6 @@ class ToxicityAvoidance:
         if save:
             save_dfs(train, valid, "real_toxicity_prompts", self.taskname)
         return train, valid
-
 
 class Jailbreak:
     taskname = "jailbreak"
@@ -834,6 +905,19 @@ class Unanswerable:
         if save:
             save_dfs(train, valid, "known_unknown", self.taskname)
         return train, valid
+    
+    def setupclimatefever(self, save=True):
+        train = pd.read_csv(f"{data_dir}/base/climatefever_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/climatefever_test.csv")
+        def proc_df(df):
+            df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+            df["label"] = df["unanswerable"].astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "climatefever", self.taskname)
+        return train, valid
 
 class NewsTopic:
     taskname = "newstopic"
@@ -852,7 +936,7 @@ class NewsTopic:
         valid = proc_df(valid)
         prompt_task = "_"+prompt_task if prompt_task is not None else ""
         if save:
-            save_dfs(train, valid, "agnews", self.taskname+prompt_task)
+            save_dfs(train, valid, "agnews", self.taskname, prompt_task)
         return train, valid
 
     def setupbbcnews(self, save=True, prompt_task=None):
@@ -868,7 +952,7 @@ class NewsTopic:
         valid = proc_df(valid)
         prompt_task = "_"+prompt_task if prompt_task is not None else ""
         if save:
-            save_dfs(train, valid, "bbcnews", self.taskname+prompt_task)
+            save_dfs(train, valid, "bbcnews", self.taskname, prompt_task)
         return train, valid
     
     def setupnytimes(self, save=True, prompt_task=None):
@@ -884,7 +968,7 @@ class NewsTopic:
         valid = proc_df(valid)
         prompt_task = "_"+prompt_task if prompt_task is not None else ""
         if save:
-            save_dfs(train, valid, "nytimes", self.taskname+prompt_task)
+            save_dfs(train, valid, "nytimes", self.taskname, prompt_task)
         return train, valid
 
 class Sentiment:
@@ -902,7 +986,7 @@ class Sentiment:
         valid = proc_df(valid)
         prompt_task = "_"+prompt_task if prompt_task is not None else ""
         if save:
-            save_dfs(train, valid, name, self.taskname+prompt_task)
+            save_dfs(train, valid, name, self.taskname, prompt_task)
         return train, valid
     
     def setup_amazonreviews(self, save=True, prompt_task=None):
@@ -933,13 +1017,12 @@ class Sentiment:
             return df
         train_df = proc_df(train)
         valid_df = proc_df(valid)
-        prompt_task_text = "_"+prompt_task if prompt_task is not None else ""
         if save:
-            save_dfs(train_df, valid_df, "indosentiment_eng", self.taskname+prompt_task_text)
+            save_dfs(train_df, valid_df, "indosentiment_eng", self.taskname, prompt_task)
         train_df = proc_df(train, "alt_text")
         valid_df = proc_df(valid, "alt_text")
         if save:
-            save_dfs(train_df, valid_df, "indosentiment_ind", self.taskname+prompt_task_text)
+            save_dfs(train_df, valid_df, "indosentiment_ind", self.taskname, prompt_task)
         return train, valid
 
     def setupnewsmtc(self, save=True, prompt_task=None):
@@ -1110,6 +1193,90 @@ class Confidence:
         return train, valid
 
 
+class Truthfullness:
+    taskname = "truthfullness"
+    prompt_task_dict = {"speaker": "Speaker 1: ", None: "", "truth": "Is the following claim true?: "}
+    def setup_felm(self, save=True, prompt_task=None):
+        train = pd.read_csv(f"{data_dir}/base/felm_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/felm_test.csv")
+        def proc_df(df):
+            df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["text"]
+            df['label'] = df['labels'].apply(all).astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "felm", self.taskname, prompt_task)
+        return train, valid
+    
+    def setup_healthver(self, save=True, prompt_task=None):
+        train = pd.read_csv(f"{data_dir}/base/healthver_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/healthver_test.csv")
+        def proc_df(df):
+            df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
+            df['label'] = (df['label'] == "Supports").astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "healthver", self.taskname, prompt_task)
+        return train, valid
+    
+    def setup_climate_fever(self, save=True, prompt_task=None):
+        train = pd.read_csv(f"{data_dir}/base/climatefever_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/climatefever_test.csv")
+        def proc_df(df):
+            df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
+            df['label'] = (df['label'] == 0).astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "climatefever", self.taskname, prompt_task)
+        return train, valid
+    
+    def setup_averitec(self, save=True, prompt_task=None):
+        train = pd.read_csv(f"{data_dir}/base/averitec_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/averitec_test.csv")
+        def proc_df(df):
+            df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
+            df['label'] = (df['label'] == "Supported").astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "averitec", self.taskname, prompt_task)
+        return train, valid
+    
+    def setup_fever(self, save=True, prompt_task=None):
+        train = pd.read_csv(f"{data_dir}/base/fever_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/fever_test.csv")
+        def proc_df(df):
+            df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
+            df['label'] = (df['label'] == "SUPPORTS").astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "fever", self.taskname, prompt_task)
+        return train, valid
+    
+    def setup_factool(self, save=True, prompt_task=None):
+        train = pd.read_csv(f"{data_dir}/base/factool_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/factool_test.csv")
+        def proc_df(df):
+            df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
+            df['label'] = df['label'].astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "factool", self.taskname, prompt_task)
+        return train, valid
+    
+
+
+
 def process_batch(batch_nos):
     if 0 in batch_nos:
         process_squad()
@@ -1151,6 +1318,13 @@ def process_batch(batch_nos):
         process_hellaswag()
         process_bigbenchhard()
         process_truthfulqa()
+    if 3 in batch_nos:
+        process_climate_fever()
+        process_felm()
+        process_fever()
+        process_averitec()
+        process_factool()
+
 
 
 
@@ -1166,6 +1340,7 @@ def setup_batch(batch_nos):
     confidence = Confidence()
     news_topic = NewsTopic()
     sentiment = Sentiment()
+    truthfulness = Truthfullness()
     if 0 in batch_nos:
         unanswerable.setuphealthver()
         unanswerable.setupqnota()
@@ -1205,6 +1380,15 @@ def setup_batch(batch_nos):
         confidence.setup_hellaswag()
         confidence.setup_bigbenchhard()
         confidence.setup_truthfulqa()
+    if 3 in batch_nos:
+        unanswerable.setupclimatefever()
+        truthfulness.setup_felm()
+        truthfulness.setup_healthver()
+        truthfulness.setup_climate_fever()
+        truthfulness.setup_averitec()
+        truthfulness.setup_fever()
+        truthfulness.setup_factool()
+    return
 
 
 
@@ -1217,5 +1401,5 @@ def setup_all():
 
 
 if __name__ == "__main__":
-    process_batch([2])
-    setup_batch([2])
+    process_batch([3])
+    setup_batch([3])

@@ -36,6 +36,12 @@ wget https://raw.githubusercontent.com/ParticleMedia/RAGTruth/refs/heads/main/da
 
 cd ..
 mkdir faithbench
-https://raw.githubusercontent.com/vectara/FaithBench/refs/heads/main/FaithBench.csv
+wget https://raw.githubusercontent.com/vectara/FaithBench/refs/heads/main/FaithBench.csv
+cd ..
+
+mkdir factool
+cd factool
+wget https://raw.githubusercontent.com/GAIR-NLP/factool/refs/heads/main/datasets/knowledge_qa/knowledge_qa.jsonl
+wget https://raw.githubusercontent.com/GAIR-NLP/factool/refs/heads/main/datasets/scientific/scientific.jsonl
 cd ..
 
