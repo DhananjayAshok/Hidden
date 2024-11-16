@@ -1625,10 +1625,10 @@ def fewshot_setup_all(model_save_name="Llama-3.1-8B-Instruct"):
     sentiment = Sentiment()
     truthfulness = Truthfullness()
     task_datasets = {
-        nei: ["healthver", "squad"], 
-        unanswerable: ["qnota", "selfaware", "known_unknown", "climate_fever"],
+        #nei: ["healthver", "squad"], 
+        #unanswerable: ["qnota", "selfaware", "known_unknown", "climate_fever"],
         confidence: ["mmlu", "cosmoqa", "piqa", "arc", "medmcqa", "commonsenseqa", "openbookqa", "qasc", "hellaswag", "bigbenchhard", "truthfulqa"],
-        news_topic: ["agnews", "bbcnews", "nytimes"],
+        #news_topic: ["agnews", "bbcnews", "nytimes"],
         sentiment: ["amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5"],
         truthfulness: ["felm", "healthver", "climate_fever", "averitec", "fever", "factool", "truthfulqa_gen"]
         }
@@ -1638,8 +1638,4 @@ def fewshot_setup_all(model_save_name="Llama-3.1-8B-Instruct"):
 
 
 if __name__ == "__main__":
-    process_felm()
-    t = Truthfullness()
-    for prompt in t.prompt_task_dict:
-        t.setup_felm(prompt_task=prompt)
     fewshot_setup_all()
