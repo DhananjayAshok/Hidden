@@ -1634,7 +1634,7 @@ def fewshot_setup_all(model_save_name="Llama-3.1-8B-Instruct"):
         confidence: ["mmlu", "cosmoqa", "piqa", "arc", "medmcqa", "commonsenseqa", "openbookqa", "qasc", "hellaswag", "bigbenchhard_mcq", "truthfulqa"],
         #news_topic: ["agnews", "bbcnews", "nytimes"],
         sentiment: ["amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment_eng", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5"],
-        truthfulness: ["felm", "healthver", "climate_fever", "averitec", "fever", "factool", "truthfulqa_gen"]
+        truthfulness: ["felm", "healthver", "climatefever", "averitec", "fever", "factool", "truthfulqa_gen"]
         }
     for task, datasets in task_datasets.items():
         for dataset in datasets:

@@ -32,7 +32,7 @@ def generate_hash(data, max_length=10):
 @click.option("--output_column", type=str, default="label")
 @click.option("--use_prompt", type=bool, default=False)
 @click.option("--overwrite", type=bool, default=False)
-@click.option('--binarize_threshold', type=float, default=0.5)
+@click.option('--binarize_threshold', type=float, default=None)
 def main(file, metric_name, prompt_column, generation_column, reference_column, output_column, use_prompt, overwrite, binarize_threshold):
     if reference_column == "none":
         reference_column = None
@@ -66,7 +66,7 @@ def main(file, metric_name, prompt_column, generation_column, reference_column, 
     outputs = metric(texts, selected_labels, filehash)
     for i, idx in enumerate(indices):
         df.loc[idx, output_column] = outputs[i]
-    if df[output_column].dtype == "float":
+    if binarize_threshold is not None and df[output_column].dtype == "float":
         df[f"{output_column}_cts"] = df[output_column]
         df[output_column] = df[output_column] > binarize_threshold
     df.to_csv(file, index=False)
