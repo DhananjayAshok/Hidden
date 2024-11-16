@@ -12,7 +12,6 @@ if not os.path.exists(report_dir):
     os.makedirs(report_dir)
 
 @click.command() # get experiment, model_save_name, task, dataset, model_kind from user
-# experiment has options ["probe_iid", "probe_ood", "inter_iid", "inter_ood"]
 @click.option("--experiment", type=click.Choice(["probe_iid", "probe_ood", "inter_iid", "inter_ood", "fewshot_pred"], case_sensitive=False), default="probe_iid")
 def main(experiment):
     base_path = os.path.join(logdir, experiment)

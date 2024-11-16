@@ -1379,11 +1379,6 @@ class Confidence:
         return valid
     
 
-
-
-
-
-
 class Truthfullness:
     taskname = "truthfullness"
     prompt_task_dict = {"speaker": "Speaker 1: ", None: "", "truth": "Is the following claim true?: "}
@@ -1628,32 +1623,24 @@ def setup_all():
 
 def fewshot_setup_all(model_save_name="Llama-3.1-8B-Instruct"):
     nei = NEI()
+    unanswerable = Unanswerable()
     toxicity = ToxicityAvoidance()
     jailbreak = Jailbreak()
     confidence = Confidence()
     news_topic = NewsTopic()
     sentiment = Sentiment()
     truthfulness = Truthfullness()
-    # nei first
-    for dataset in ["healthver", "squad"]:
-        nei.fewshot_setup(dataset, model_save_name)
-    for dataset in ["qnota", "selfaware", "known_unknown", "climate_fever"]:
-        nei.fewshot_setup(dataset, model_save_name)
-    # confidence
-    for dataset in ["mmlu", "cosmoqa", "piqa", "arc", "medmcqa", "commonsenseqa", "openbookqa", "qasc", "hellaswag", "bigbenchhard", "truthfulqa"]:
-        confidence.fewshot_setup(dataset, model_save_name)
-    # news 
-    for dataset in ["agnews", "bbcnews", "nytimes"]:
-        news_topic.fewshot_setup(dataset, model_save_name)
-
-    # sentiment
-    for dataset in ["amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5"]:
-        sentiment.fewshot_setup(dataset, model_save_name)
-
-    # truthfullness
-    for dataset in ["felm", "healthver", "climate_fever", "averitec", "fever", "factool", "truthfulqa_gen"]:
-        truthfulness.fewshot_setup(dataset, model_save_name)
-
+    task_datasets = {
+        nei: ["healthver", "squad"], 
+        unanswerable: ["qnota", "selfaware", "known_unknown", "climate_fever"],
+        confidence: ["mmlu", "cosmoqa", "piqa", "arc", "medmcqa", "commonsenseqa", "openbookqa", "qasc", "hellaswag", "bigbenchhard", "truthfulqa"],
+        news_topic: ["agnews", "bbcnews", "nytimes"],
+        sentiment: ["amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5"],
+        truthfulness: ["felm", "healthver", "climate_fever", "averitec", "fever", "factool", "truthfulqa_gen"]
+        }
+    for task, datasets in task_datasets.items():
+        for dataset in datasets:
+            task.fewshot_setup(dataset, model_save_name)
 
 
 if __name__ == "__main__":

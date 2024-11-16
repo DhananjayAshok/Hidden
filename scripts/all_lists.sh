@@ -1,17 +1,8 @@
-task="unanswerable"
-datasets=("qnota" "selfaware" "known_unknown" "climatefever")
-
-task="nei"
-datasets=("squad" "healthver")
-
-task="toxicity_avoidance"
-datasets=("real_toxicity_prompts" "toxic_chat")
-
-task="sentiment"
-datasets=("amazonreviews" "yelp" "twitterfinance" "twittermteb" "auditorsentiment" "fiqa" "indosentiment_eng" "newsmtc" "imdb" "financial_phrasebank" "dair_emotion" "sst5")
-
-task="confidence"
-datasets=("mmlu" "cosmoqa" "piqa" "arc" "medmcqa" "commonsenseqa" "openbookqa" "qasc" "hellaswag" "bigbenchhard_mcq" "truthfulqa")
-
-task="truthfullness"
-datasets=("felm" "healthver" "climatefever" "averitec" "fever" "factool" "truthfulqa_gen")
+declare -A tasks_and_datasets=(
+    ["confidence"]="mmlu cosmoqa piqa arc medmcqa commonsenseqa openbookqa qasc hellaswag bigbenchhard_mcq truthfulqa"
+    ["nei"]="squad healthver"
+    ["unanswerable"]="qnota selfaware known_unknown"
+    ["sentiment"]="amazonreviews yelp twitterfinance twittermteb auditorsentiment fiqa indosentiment_eng newsmtc imdb financial_phrasebank dair_emotion sst5"
+    ["truthfullness"]="felm healthver climatefever averitec fever factool truthfulqa_gen"
+    ["newstopic"]="agnews bbcnews nytimes"
+)
