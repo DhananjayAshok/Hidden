@@ -18,6 +18,8 @@ def main(experiment):
     report_file = report_dir + f"/{experiment}.csv"
     if experiment == "probe_iid":
         df = do_iid_probe(base_path, report_file)
+    if experiment == "fewshot_pred":
+        df = do_fewshot_pred(base_path, report_file)
     elif experiment == "probe_ood":
         raise NotImplementedError
     else:
