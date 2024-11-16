@@ -14,6 +14,7 @@ def remove_urls(text):
     return cleaned_text
 
 data_dir = os.environ["DATA_DIR"]
+results_dir = os.environ["RESULTS_DIR"]
 if not os.path.exists(data_dir):
     raise ValueError(f"DATA_DIR {data_dir} does not exist. Please set the DATA_DIR environment variable to the directory where you want to save the data and then run the scripts/get_data.sh script.")
 if not os.path.exists(data_dir+"/base/"):
@@ -178,12 +179,12 @@ def process_felm(random_seed=42, save=True):
         train_df = train.sample(frac=0.2, random_state=random_seed)
         valid = train.drop(train_df.index).reset_index(drop=True)
         train_df = train_df.reset_index(drop=True)
-        train_df["idx"] = train_df.index
-        valid["idx"] = valid.index
         train_dfs.append(train_df)
         valid_dfs.append(valid)
     train_df = pd.concat(train_dfs, ignore_index=True)
     valid_df = pd.concat(valid_dfs, ignore_index=True)
+    train_df["idx"] = train_df.index
+    valid_df["idx"] = valid_df.index
     if save:
         train_df.to_csv(f"{data_dir}/base/felm_train.csv", index=False)
         valid_df.to_csv(f"{data_dir}/base/felm_test.csv", index=False)
@@ -878,18 +879,7 @@ class Jailbreak:
 
 class Unanswerable:
     taskname = "unanswerable"
-    def setupsquad(self, save=True, random_seed=42):
-        train = pd.read_csv(f"{data_dir}/base/squad_train.csv").sample(12_000, random_state=random_seed).reset_index(drop=True)
-        valid = pd.read_csv(f"{data_dir}/base/squad_test.csv")
-        def proc_df(df):
-            df["text"] = "Answer the following question: \nQuestion: " + df["text"] + "\nAnswer: "
-            df["label"] = df["unanswerable"].astype(int)
-            return df[["idx", "text", "label"]]
-        train = proc_df(train)
-        valid = proc_df(valid)
-        if save:
-            save_dfs(train, valid, "squad", self.taskname)
-        return train, valid
+    few_shot_eval_prompt = "True or False, The question or claim below is fundamentally not objectively answerable or verifiable: "
     
     def setupqnota(self, save=True, random_seed=42):
         files = ["incomplete_questions", "futuristic_questions", "unmeasurable_questions"]
@@ -917,20 +907,6 @@ class Unanswerable:
         valid["label"] = valid["label"].astype(int)
         if save:
             save_dfs(train, valid, "qnota", self.taskname)
-        return train, valid
-
-    def setuphealthver(self, save=True):
-        # will set up healthver for the NIE task
-        train = pd.read_csv(f"{data_dir}/base/healthver_train.csv")
-        valid = pd.read_csv(f"{data_dir}/base/healthver_test.csv")
-        def proc_df(df):
-            df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
-            df["label"] = df["unanswerable"].astype(int)
-            return df[["idx", "text", "label"]]
-        train = proc_df(train)
-        valid = proc_df(valid)
-        if save:
-            save_dfs(train, valid, "healthver", self.taskname)
         return train, valid
     
     def setupselfaware(self, save=True):
@@ -966,7 +942,7 @@ class Unanswerable:
         train = pd.read_csv(f"{data_dir}/base/climatefever_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/climatefever_test.csv")
         def proc_df(df):
-            df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+            df["text"] = "The following claim is either TRUE or FALSE. Which is it?\nClaim: " + df["text"] + "\nAnswer: "
             df["label"] = df["unanswerable"].astype(int)
             return df[["idx", "text", "label"]]
         train = proc_df(train)
@@ -974,11 +950,94 @@ class Unanswerable:
         if save:
             save_dfs(train, valid, "climatefever", self.taskname)
         return train, valid
+    
+    def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
+        train = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_train.csv")
+        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_test.csv")
+        train["label"] = train["label"].astype(bool)
+        valid["label"] = valid["label"].astype(bool)
+        if dataset != "climatefever":
+            train["text_only"] = train["text"].apply(lambda x: x.split("\nQuestion:")[-1].split("\nAnswer:")[0])
+            valid["text_only"] = valid["text"].apply(lambda x: x.split("\nQuestion:")[-1].split("\nAnswer:")[0])
+        else:
+            train["text_only"] = train["text"].apply(lambda x: x.split("\nClaim:")[-1].split("\nAnswer:")[0])
+            valid["text_only"] = valid["text"].apply(lambda x: x.split("\nClaim:")[-1].split("\nAnswer:")[0])
+        sample_options = train.index
+        for i in range(len(valid)):
+            # same as the fewshot_setup function in class Truthfullness
+            prompt_candidates = np.random.choice(sample_options, k, replace=False)
+            prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
+            prompt = self.fewshot_eval_prompt
+            for j in range(k):
+                statement_component = f"Sentence: {prompt_selected.loc[j, 'text_only']}"
+                answer_component = f"\nAnswer: {prompt_selected.loc[j, 'label']} [STOP]"
+                prompt = prompt + statement_component + answer_component
+            own_statement_component = f"\nSentence: {valid.loc[i, 'text_only']}"
+            valid.loc[i, "text"] = prompt + own_statement_component + "\nAnswer: "
+        if save:
+            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", index=False)
+        return valid
+
+
+
+class NEI:
+    taskname = "nei"
+    few_shot_eval_prompt = "True or False, There is sufficient information in the evidence to verify the veracity of the claim: "
+
+    def setupsquad(self, save=True, random_seed=42):
+        train = pd.read_csv(f"{data_dir}/base/squad_train.csv").sample(12_000, random_state=random_seed).reset_index(drop=True)
+        valid = pd.read_csv(f"{data_dir}/base/squad_test.csv")
+        def proc_df(df):
+            df["text"] = "Answer the following question: \nQuestion: " + df["text"] + "\nAnswer: "
+            df["label"] = df["unanswerable"].astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "squad", self.taskname)
+        return train, valid
+
+    def setuphealthver(self, save=True):
+        # will set up healthver for the NIE task
+        train = pd.read_csv(f"{data_dir}/base/healthver_train.csv")
+        valid = pd.read_csv(f"{data_dir}/base/healthver_test.csv")
+        def proc_df(df):
+            df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
+            df["label"] = df["unanswerable"].astype(int)
+            return df[["idx", "text", "label"]]
+        train = proc_df(train)
+        valid = proc_df(valid)
+        if save:
+            save_dfs(train, valid, "healthver", self.taskname)
+        return train, valid
+
+    def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
+        train = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_train.csv")
+        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_test.csv")
+        train["label"] = train["label"].astype(bool)
+        valid["label"] = valid["label"].astype(bool)
+        sample_options = train.index
+        for i in range(len(valid)):
+            # same as the fewshot_setup function in class Truthfullness
+            prompt_candidates = np.random.choice(sample_options, k, replace=False)
+            prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
+            prompt = self.fewshot_eval_prompt
+            for j in range(k):
+                statement_component = f"\nSnippet: {prompt_selected.loc[j, 'text']}"
+                answer_component = f"\nAnswer: {prompt_selected.loc[j, 'label']} [STOP]"
+                prompt = prompt + statement_component + answer_component
+            own_statement_component = f"\nSnippet: {valid.loc[i, 'text']}"
+            valid.loc[i, "text"] = prompt + own_statement_component + "\nAnswer: "
+        if save:
+            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", index=False)
+        return valid
 
 class NewsTopic:
     taskname = "newstopic"
     prompt_task_dict = {"summ": "Summarize the following news article: ", "answer": "Answer the question using information from the news article: "
                         , "question" : "Ask a question based on the news article: ", None: "", "topic": "What is the topic of the following news article? "}
+    fewshot_eval_prompt = "True or False, The following news snippet has a tech or science topic: "
+
     def setupagnews(self, save=True, prompt_task=None):
         train = pd.read_csv(f"{data_dir}/base/agnews_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/agnews_test.csv")
@@ -1027,9 +1086,32 @@ class NewsTopic:
             save_dfs(train, valid, "nytimes", self.taskname, prompt_task)
         return train, valid
 
+    def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
+        train = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_train.csv")
+        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_test.csv")
+        train["label"] = train["label"].astype(bool)
+        valid["label"] = valid["label"].astype(bool)
+        sample_options = train.index
+        for i in range(len(valid)):
+            # same as the fewshot_setup function in class Truthfullness
+            prompt_candidates = np.random.choice(sample_options, k, replace=False)
+            prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
+            prompt = self.fewshot_eval_prompt
+            for j in range(k):
+                statement_component = f"\nSnippet: {prompt_selected.loc[j, 'text']}"
+                answer_component = f"\nAnswer: {prompt_selected.loc[j, 'label']} [STOP]"
+                prompt = prompt + statement_component + answer_component
+            own_statement_component = f"\nSnippet: {valid.loc[i, 'text']}"
+            valid.loc[i, "text"] = prompt + own_statement_component + "\nAnswer: "
+        if save:
+            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", index=False)
+        return valid
+
+
 class Sentiment:
     taskname = "sentiment"
     prompt_task_dict = {"speaker": "Speaker 1: ", "question": "Ask a question based on the following prompt: ", "answer": "Answer the following question: ", None: "", "sentiment": "What is the sentiment of the following text? "}
+    fewshot_prompt_eval = "True or False, The following statment has a positive sentiment: "
 
     def setupstandard(self, name, save=True, prompt_task=None):
         train = pd.read_csv(f"{data_dir}/base/{name}_train.csv")
@@ -1095,6 +1177,29 @@ class Sentiment:
     def setup_sst5(self, save=True, prompt_task=None):
         return self.setupstandard("sst5", save, prompt_task)
 
+    # same as fewshot_setup in Truthfullness and Confidence classes
+    def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
+        train = pd.read_csv(f"{results_dir}/{model_save_name}/{Confidence.taskname}/{dataset}_train.csv")
+        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{Confidence.taskname}/{dataset}_test.csv")
+        train["label"] = train["label"].astype(bool)
+        valid["label"] = valid["label"].astype(bool)
+        sample_options = train.index
+        for i in range(len(valid)):
+            # same as the fewshot_setup function in class Truthfullness
+            prompt_candidates = np.random.choice(sample_options, k, replace=False)
+            prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
+            prompt = Sentiment.fewshot_eval_prompt
+            for j in range(k):
+                statement_component = f"\nStatement: {prompt_selected.loc[j, 'text']}"
+                answer_component = f"\nAnswer: {prompt_selected.loc[j, 'label']} [STOP]"
+                prompt = prompt + statement_component + answer_component
+            own_statement_component = f"\nStatement: {valid.loc[i, 'text']}"
+            valid.loc[i, "text"] = prompt + own_statement_component + "\nAnswer: "
+        if save:
+            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{Sentiment.taskname}/{dataset}_test.csv", index=False)
+        return valid
+    
+
 
 def choices_to_text(choices):
     text = ""
@@ -1146,6 +1251,7 @@ def randomize_choices(choices, answer, force_total=None):
 class Confidence:
     taskname = "confidence"
     system_prompt = "Answer the following MCQ by providing the correct option"
+    fewshot_eval_prompt = "Is the following MCQ Answer Correct?"
 
     def setupstandard(self, name, question_column="question", subset_col=None, save=True, random_seed=42, k=2, force_total=None, train=None, valid=None):
         if train is None or valid is None:
@@ -1246,11 +1352,43 @@ class Confidence:
         train, valid = self.setupstandard("truthfulqa", question_column="question", save=save, random_seed=random_seed, k=k)
         train, valid = self.setupstandard("truthfulqa", question_column="question", save=save, random_seed=random_seed, k=k, force_total=2)
         return train, valid
+    
+    def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
+        train = pd.read_csv(f"{results_dir}/{model_save_name}/{Confidence.taskname}/{dataset}_train.csv")
+        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{Confidence.taskname}/{dataset}_test.csv")
+        train["label"] = train["label"].astype(bool)
+        valid["label"] = valid["label"].astype(bool)
+        train["question_only"] = train["text"].apply(lambda x: x.split("Question:")[-1].split("Answer:")[0].strip())
+        valid["question_only"] = valid["text"].apply(lambda x: x.split("Question:")[-1].split("Answer:")[0].strip())
+        sample_options = train.index
+        for i in range(len(valid)):
+            # same as the fewshot_setup function in class Truthfullness
+            prompt_candidates = np.random.choice(sample_options, k, replace=False)
+            prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
+            prompt = Confidence.fewshot_eval_prompt
+            for j in range(k):
+                question_component = f"\nQuestion: {prompt_selected.loc[j, 'question_only']}"
+                answer_component = f"\nAnswer: {prompt_selected.loc[j, 'output']}"
+                correct_component = f"\nCorrect: {prompt_selected.loc[j, 'label']} [STOP]"
+                prompt = prompt + question_component + answer_component + correct_component
+            own_question_component = f"\nQuestion: {valid.loc[i, 'question_only']}"
+            own_answer_component = f"\nAnswer: {valid.loc[i, 'output']}"
+            valid.loc[i, "text"] = prompt + own_question_component + own_answer_component + "\nCorrect: "
+        if save:
+            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{Confidence.taskname}/{dataset}_test.csv", index=False)
+        return valid
+    
+
+
+
+
 
 
 class Truthfullness:
     taskname = "truthfullness"
     prompt_task_dict = {"speaker": "Speaker 1: ", None: "", "truth": "Is the following claim true?: "}
+    fewshot_eval_system_prompt = "Is the following claim true?: "
+
     def setup_felm(self, save=True, prompt_task=None):
         train = pd.read_csv(f"{data_dir}/base/felm_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/felm_test.csv")
@@ -1343,7 +1481,26 @@ class Truthfullness:
             save_dfs(train, valid, "truthfulqa_gen", self.taskname, prompt_task, dropnan_cols=["idx", "text", "label"])
         return train, valid
 
-
+    def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
+        train = pd.read_csv(f"{results_dir}/{model_save_name}/{Truthfullness.taskname}/{dataset}_train.csv")
+        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{Truthfullness.taskname}/{dataset}_test.csv")
+        sample_options = train.index
+        train["label"] = train["label"].astype(bool)
+        valid["label"] = valid["label"].astype(bool)
+        for i in range(len(valid)):
+            prompt_candidates = np.random.choice(sample_options, k, replace=False)
+            prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
+            prompt = Truthfullness.fewshot_eval_system_prompt
+            for j in range(k):
+                question_component = f"\nClaim: {prompt_selected.loc[j, 'text']}"
+                answer_component = f"\nAnswer: {prompt_selected.loc[j, 'label']} [STOP]"
+                prompt = prompt + question_component + answer_component
+            own_question_component = f"\nClaim: {valid.loc[i, 'text']}"
+            valid.loc[i, "text"] = prompt + own_question_component + "\nAnswer: "
+        if save:
+            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{Truthfullness.taskname}/{dataset}_test.csv", index=False)
+        return valid
+    
 
 def process_batch(batch_nos):
     if 0 in batch_nos:
@@ -1405,6 +1562,7 @@ def process_all():
 
 def setup_batch(batch_nos):
     unanswerable = Unanswerable()
+    nei = NEI()
     toxicity = ToxicityAvoidance()
     jailbreak = Jailbreak()
     confidence = Confidence()
@@ -1412,10 +1570,10 @@ def setup_batch(batch_nos):
     sentiment = Sentiment()
     truthfulness = Truthfullness()
     if 0 in batch_nos:
-        unanswerable.setuphealthver()
+        nei.setuphealthver()
         unanswerable.setupqnota()
         unanswerable.setupselfaware()
-        unanswerable.setupsquad()
+        nei.setupsquad()
         unanswerable.setupknown_unknown()
         toxicity.setup_real_toxicity_prompts()
         toxicity.setup_toxic_chat()
@@ -1462,18 +1620,45 @@ def setup_batch(batch_nos):
     return
 
 
-
-
-
 def setup_all():
     setup_batch([0, 1, 2, 3])
     return
 
 
 
+def fewshot_setup_all(model_save_name="Llama-3.1-8B-Instruct"):
+    nei = NEI()
+    toxicity = ToxicityAvoidance()
+    jailbreak = Jailbreak()
+    confidence = Confidence()
+    news_topic = NewsTopic()
+    sentiment = Sentiment()
+    truthfulness = Truthfullness()
+    # nei first
+    for dataset in ["healthver", "squad"]:
+        nei.fewshot_setup(dataset, model_save_name)
+    for dataset in ["qnota", "selfaware", "known_unknown", "climate_fever"]:
+        nei.fewshot_setup(dataset, model_save_name)
+    # confidence
+    for dataset in ["mmlu", "cosmoqa", "piqa", "arc", "medmcqa", "commonsenseqa", "openbookqa", "qasc", "hellaswag", "bigbenchhard", "truthfulqa"]:
+        confidence.fewshot_setup(dataset, model_save_name)
+    # news 
+    for dataset in ["agnews", "bbcnews", "nytimes"]:
+        news_topic.fewshot_setup(dataset, model_save_name)
+
+    # sentiment
+    for dataset in ["amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5"]:
+        sentiment.fewshot_setup(dataset, model_save_name)
+
+    # truthfullness
+    for dataset in ["felm", "healthver", "climate_fever", "averitec", "fever", "factool", "truthfulqa_gen"]:
+        truthfulness.fewshot_setup(dataset, model_save_name)
+
+
+
 if __name__ == "__main__":
-    #process_batch([3])
-    #setup_batch([3])
+    process_felm()
     t = Truthfullness()
-    t.setup_averitec()
-    t.setup_truthfulqa()
+    for prompt in t.prompt_task_dict:
+        t.setup_felm(prompt_task=prompt)
+    fewshot_setup_all()

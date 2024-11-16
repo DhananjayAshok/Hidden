@@ -5,6 +5,7 @@ import warnings
 
 logdir = os.environ["LOG_DIR"]
 results_dir = os.environ["RESULTS_DIR"]
+data_dir = os.environ["DATA_DIR"]
 
 report_dir = os.path.join(logdir, "reports")
 if not os.path.exists(report_dir):
@@ -12,7 +13,7 @@ if not os.path.exists(report_dir):
 
 @click.command() # get experiment, model_save_name, task, dataset, model_kind from user
 # experiment has options ["probe_iid", "probe_ood", "inter_iid", "inter_ood"]
-@click.option("--experiment", type=click.Choice(["probe_iid", "probe_ood", "inter_iid", "inter_ood"], case_sensitive=False), default="probe_iid")
+@click.option("--experiment", type=click.Choice(["probe_iid", "probe_ood", "inter_iid", "inter_ood", "fewshot_pred"], case_sensitive=False), default="probe_iid")
 def main(experiment):
     base_path = os.path.join(logdir, experiment)
     report_file = report_dir + f"/{experiment}.csv"
@@ -25,7 +26,7 @@ def main(experiment):
     df.to_csv(report_file, index=False)
 
 
-def do_iid_probe(base_path, report_file):
+def do_iid_probe(base_path):
     model_options = os.listdir(base_path)
     if len(model_options) == 0:
         warnings.warn(f"No models found in {base_path}. Exiting ...")
@@ -106,7 +107,36 @@ def do_iid_probe(base_path, report_file):
     return df
 
 
-
+def do_fewshot_pred(base_path):
+    # this one won't use base_path
+    base_path = data_dir + "/fewshot_pred"
+    model_options = os.listdir(base_path)
+    if len(model_options) == 0:
+        warnings.warn(f"No models found in {base_path}. Exiting ...")
+        return
+    data = []
+    columns = ["model", "task", "dataset", "text", "label", "fewshot_pred"]
+    for model_save_name in model_options:
+        task_options = os.listdir(os.path.join(base_path, model_save_name))
+        if len(task_options) == 0:
+            warnings.warn(f"No tasks found in {base_path}/{model_save_name}. Skipping ...")
+            continue
+        for task in task_options:
+            dataset_options = os.listdir(os.path.join(base_path, model_save_name, task))
+            if len(dataset_options) == 0:
+                warnings.warn(f"No datasets found in {base_path}/{model_save_name}/{task}. Skipping ...")
+                continue
+            for dataset_file in dataset_options:
+                df = pd.read_csv(f"{base_path}/{model_save_name}/{task}/{dataset_file}.csv")
+                dataset_name = dataset_file.split("_")[0]
+                for needed_column in ["text", "label", "fewshot_pred"]:
+                    if needed_column not in df.columns:
+                        warnings.warn(f"Missing column {needed_column} in {base_path}/{model_save_name}/{task}/{dataset_file} with columns {df.columns} Skipping ...")
+                        continue
+                for i, row in df.iterrows():
+                    data.append([model_save_name, task, dataset_name, row["label"], row["fewshot_pred"]])
+    df = pd.DataFrame(data, columns=columns)
+    return df
 
 if __name__ == "__main__":
     main()

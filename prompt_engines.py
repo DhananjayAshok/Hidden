@@ -239,12 +239,8 @@ class VLLMModel:
 
 
 def get_prompt_engine(prompt_engine_name, max_new_tokens=10):
-    if prompt_engine_name == "openai3":
-        return OpenAIGPT(model="gpt-3.5-turbo", max_new_tokens=max_new_tokens)
-    elif prompt_engine_name == "openai4":
-        return OpenAIGPT(model="gpt-4-turbo", max_new_tokens=max_new_tokens)
-    elif prompt_engine_name == "openai4o":
-        return OpenAIGPT(model="gpt-4o", max_new_tokens=max_new_tokens)
+    if prompt_engine_name in ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini"]:
+        return OpenAIGPT(model=prompt_engine_name, max_new_tokens=max_new_tokens)
     else:
         # assume its a valid VLLM model
         return VLLMModel(prompt_engine_name, max_new_tokens=max_new_tokens)

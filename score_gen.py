@@ -74,7 +74,7 @@ def get_metric_class(metric_name):
     Returns a class that can be called with input text and outputs a single float value
     """
     if "-" in metric_name:
-        prompt_engine = metric_name.split("-")[1]
+        prompt_engine = "-".join(metric_name.split("-")[1:])
         metric_name = metric_name.split("-")[0]
     if metric_name == "toxdectroberta":
         return ToxDectRoberta()
@@ -88,6 +88,9 @@ def get_metric_class(metric_name):
         return MCQStringMatch(cot=True)
     if metric_name == "unanswerable":
         return UnanswerablePseudoLabel(prompt_engine)
+    if metric_name == "fewshot_tf":
+        return FewShotTFPsuedoLabel(prompt_engine)
+
     raise ValueError(f"Metric {metric_name} not found")
 
 class ToxDectRoberta:
@@ -242,7 +245,12 @@ class PseudoLabel:
                 actual_hash = None
             else:
                 actual_hash = filehash+f"dfbatch_{i}"
-            batch_scores = self.get_scores(batch_texts, batch_labels, actual_hash)
+            batch_prompts = [self.get_prompt(text, label) for text, label in zip(batch_texts, batch_labels)]
+            if isinstance(self.prompt_engine, OpenAIGPT):
+                batch_outputs = self.prompt_engine(batch_prompts, actual_hash)
+            else:
+                batch_outputs = self.prompt_engine(batch_prompts)
+            batch_scores = [self.parse_fn(output) for output in batch_outputs]
             scores.extend(batch_scores)
         return scores
    
@@ -296,7 +304,18 @@ class UnanswerablePseudoLabel(PseudoLabel):
         return self.prompt_holder(new_query, openai=is_openai)
 
 
+class FewShotTFPsuedoLabel(PseudoLabel):
+    def __init__(self, prompt_engine_name, batch_size=None):
+        super().__init__()
+        self.batch_size = batch_size
+        self.prompt_engine = get_prompt_engine(prompt_engine_name)
+        self.parse_fn = self.parse_yes_no
 
+    def get_prompt(self, text, label):
+        new_query = text
+        is_openai = isinstance(self.prompt_engine, OpenAIGPT)
+        assert not is_openai, f"Haven't implemented this yet"
+        return new_query
 
 
 if __name__ == "__main__":

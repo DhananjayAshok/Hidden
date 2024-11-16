@@ -1,5 +1,8 @@
 task="unanswerable"
-datasets=("squad" "healthver" "qnota" "selfaware" "known_unknown" "climatefever")
+datasets=("qnota" "selfaware" "known_unknown" "climatefever")
+
+task="nei"
+datasets=("squad" "healthver")
 
 task="toxicity_avoidance"
 datasets=("real_toxicity_prompts" "toxic_chat")
