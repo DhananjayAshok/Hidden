@@ -17,9 +17,9 @@ def main(experiment):
     base_path = os.path.join(logdir, experiment)
     report_file = report_dir + f"/{experiment}.csv"
     if experiment == "probe_iid":
-        df = do_iid_probe(base_path, report_file)
+        df = do_iid_probe(base_path)
     if experiment == "fewshot_pred":
-        df = do_fewshot_pred(base_path, report_file)
+        df = do_fewshot_pred(base_path)
     elif experiment == "probe_ood":
         raise NotImplementedError
     else:
@@ -110,7 +110,7 @@ def do_iid_probe(base_path):
 
 def do_fewshot_pred(base_path):
     # this one won't use base_path
-    base_path = data_dir + "/fewshot_pred"
+    base_path = data_dir + "/fewshot_eval"
     model_options = os.listdir(base_path)
     if len(model_options) == 0:
         warnings.warn(f"No models found in {base_path}. Exiting ...")
@@ -133,10 +133,14 @@ def do_fewshot_pred(base_path):
                     df = pd.read_csv(f"{base_path}/{model_save_name}/{task}/{dataset_file}", lineterminator="\n")
                 else:
                     df = pd.read_csv(f"{base_path}/{model_save_name}/{task}/{dataset_file}")
+                flag = False
                 for needed_column in ["text", "label", "fewshot_pred"]:
                     if needed_column not in df.columns:
                         warnings.warn(f"Missing column {needed_column} in {base_path}/{model_save_name}/{task}/{dataset_file} with columns {df.columns} Skipping ...")
-                        continue
+                        flag = True
+                        break
+                if flag:
+                    continue
                 for i, row in df.iterrows():
                     data.append([model_save_name, task, dataset_name, row["label"], row["fewshot_pred"]])
     df = pd.DataFrame(data, columns=columns)
