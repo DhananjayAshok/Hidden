@@ -29,8 +29,8 @@ def save_dfs(train, valid, dataset_name, taskname, prompt_task=None, dropnan_col
         prompt_task = ""
     else:
         prompt_task = "_"+prompt_task
-    if not os.path.exists(f"{data_dir}/{taskname}/"):
-        os.makedirs(f"{data_dir}/{taskname}/")
+    if not os.path.exists(f"{data_dir}/{taskname}{prompt_task}/"):
+        os.makedirs(f"{data_dir}/{taskname}{prompt_task}/")
     if dropnan_cols is not None:
         nan_cols = train[dropnan_cols].isna().any(axis=1)
         train = train[~nan_cols].reset_index(drop=True)
@@ -40,6 +40,13 @@ def save_dfs(train, valid, dataset_name, taskname, prompt_task=None, dropnan_col
             train = train.sample(n=maximum_train_size, random_state=global_random_seed).reset_index(drop=True)
     train.to_csv(f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_train.csv", index=False)
     valid.to_csv(f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_test.csv", index=False)
+
+def get_results_df(model_save_name, taskname, dataset):
+    train = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_train.csv")
+    valid = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_test.csv")
+    train["label"] = train["label"].astype(bool)
+    valid["label"] = valid["label"].astype(bool)
+
 
 
 # News Topic
@@ -952,10 +959,7 @@ class Unanswerable:
         return train, valid
     
     def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
-        train = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_train.csv")
-        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_test.csv")
-        train["label"] = train["label"].astype(bool)
-        valid["label"] = valid["label"].astype(bool)
+        train, valid = get_results_df(model_save_name, self.taskname, dataset)
         if dataset != "climatefever":
             train["text_only"] = train["text"].apply(lambda x: x.split("\nQuestion:")[-1].split("\nAnswer:")[0])
             valid["text_only"] = valid["text"].apply(lambda x: x.split("\nQuestion:")[-1].split("\nAnswer:")[0])
@@ -964,7 +968,6 @@ class Unanswerable:
             valid["text_only"] = valid["text"].apply(lambda x: x.split("\nClaim:")[-1].split("\nAnswer:")[0])
         sample_options = train.index
         for i in range(len(valid)):
-            # same as the fewshot_setup function in class Truthfullness
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = self.fewshot_eval_prompt
@@ -1012,13 +1015,11 @@ class NEI:
         return train, valid
 
     def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
-        train = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_train.csv")
-        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_test.csv")
+        train, valid = get_results_df(model_save_name, self.taskname, dataset)
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
         sample_options = train.index
         for i in range(len(valid)):
-            # same as the fewshot_setup function in class Truthfullness
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = self.fewshot_eval_prompt
@@ -1087,13 +1088,11 @@ class NewsTopic:
         return train, valid
 
     def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
-        train = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_train.csv")
-        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{self.taskname}/{dataset}_test.csv")
+        train, valid = get_results_df(model_save_name, self.taskname, dataset)
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
         sample_options = train.index
         for i in range(len(valid)):
-            # same as the fewshot_setup function in class Truthfullness
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = self.fewshot_eval_prompt
@@ -1177,15 +1176,12 @@ class Sentiment:
     def setup_sst5(self, save=True, prompt_task=None):
         return self.setupstandard("sst5", save, prompt_task)
 
-    # same as fewshot_setup in Truthfullness and Confidence classes
     def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
-        train = pd.read_csv(f"{results_dir}/{model_save_name}/{Confidence.taskname}/{dataset}_train.csv")
-        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{Confidence.taskname}/{dataset}_test.csv")
+        train, valid = get_results_df(model_save_name, self.taskname, dataset)
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
         sample_options = train.index
         for i in range(len(valid)):
-            # same as the fewshot_setup function in class Truthfullness
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = Sentiment.fewshot_eval_prompt
@@ -1354,15 +1350,13 @@ class Confidence:
         return train, valid
     
     def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
-        train = pd.read_csv(f"{results_dir}/{model_save_name}/{Confidence.taskname}/{dataset}_train.csv")
-        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{Confidence.taskname}/{dataset}_test.csv")
+        train, valid = get_results_df(model_save_name, self.taskname, dataset)
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
         train["question_only"] = train["text"].apply(lambda x: x.split("Question:")[-1].split("Answer:")[0].strip())
         valid["question_only"] = valid["text"].apply(lambda x: x.split("Question:")[-1].split("Answer:")[0].strip())
         sample_options = train.index
         for i in range(len(valid)):
-            # same as the fewshot_setup function in class Truthfullness
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = Confidence.fewshot_eval_prompt
@@ -1477,8 +1471,7 @@ class Truthfullness:
         return train, valid
 
     def fewshot_setup(self, dataset, model_save_name, k=3, save=True):
-        train = pd.read_csv(f"{results_dir}/{model_save_name}/{Truthfullness.taskname}/{dataset}_train.csv")
-        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{Truthfullness.taskname}/{dataset}_test.csv")
+        train, valid = get_results_df(model_save_name, self.taskname, dataset)
         sample_options = train.index
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
@@ -1605,13 +1598,14 @@ def setup_batch(batch_nos):
         confidence.setup_truthfulqa()
     if 3 in batch_nos:
         unanswerable.setupclimatefever()
-        truthfulness.setup_felm()
-        truthfulness.setup_healthver()
-        truthfulness.setup_climate_fever()
-        truthfulness.setup_averitec()
-        truthfulness.setup_fever()
-        truthfulness.setup_factool()
-        truthfulness.setup_truthfulqa()
+        for key in truthfulness.prompt_task_dict:
+            truthfulness.setup_felm(prompt_task=key)
+            truthfulness.setup_healthver(prompt_task=key)
+            truthfulness.setup_climate_fever(prompt_task=key)
+            truthfulness.setup_averitec(prompt_task=key)
+            truthfulness.setup_fever(prompt_task=key)
+            truthfulness.setup_factool(prompt_task=key)
+            truthfulness.setup_truthfulqa(prompt_task=key)
     return
 
 
