@@ -313,9 +313,7 @@ class UnanswerablePseudoLabel(PseudoLabel):
 
 class FewShotTFPsuedoLabel(PseudoLabel):
     def __init__(self, prompt_engine_name, batch_size=None):
-        super().__init__()
-        self.batch_size = batch_size
-        self.prompt_engine = get_prompt_engine(prompt_engine_name)
+        super().__init__(prompt_engine_name, batch_size)
         self.parse_fn = self.parse_yes_no
 
     def get_prompt(self, text, label):
