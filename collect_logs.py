@@ -126,8 +126,11 @@ def do_fewshot_pred(base_path):
                 warnings.warn(f"No datasets found in {base_path}/{model_save_name}/{task}. Skipping ...")
                 continue
             for dataset_file in dataset_options:
-                df = pd.read_csv(f"{base_path}/{model_save_name}/{task}/{dataset_file}.csv")
                 dataset_name = dataset_file.split("_")[0]
+                if "indosentiment" in dataset_name:
+                    df = pd.read_csv(f"{base_path}/{model_save_name}/{task}/{dataset_file}", lineterminator="\n")
+                else:
+                    df = pd.read_csv(f"{base_path}/{model_save_name}/{task}/{dataset_file}")
                 for needed_column in ["text", "label", "fewshot_pred"]:
                     if needed_column not in df.columns:
                         warnings.warn(f"Missing column {needed_column} in {base_path}/{model_save_name}/{task}/{dataset_file} with columns {df.columns} Skipping ...")

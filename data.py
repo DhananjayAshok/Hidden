@@ -47,8 +47,12 @@ def save_dfs(train, valid, dataset_name, taskname, prompt_task=None, dropnan_col
     save_df(valid, f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_test.csv", dropnan_cols=dropnan_cols)
 
 def get_results_df(model_save_name, taskname, dataset):
-    train = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_train_inference.csv")
-    valid = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_test_inference.csv")
+    if "indosentiment" in dataset:
+        train = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_train_inference.csv", lineterminator='\n')
+        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_test_inference.csv", lineterminator='\n')
+    else:
+        train = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_train_inference.csv")
+        valid = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_test_inference.csv")
     train["label"] = train["label"].astype(bool)
     valid["label"] = valid["label"].astype(bool)
     return train, valid
@@ -1113,7 +1117,7 @@ class NewsTopic:
 class Sentiment:
     taskname = "sentiment"
     prompt_task_dict = {"speaker": "Speaker 1: ", "question": "Ask a question based on the following prompt: ", "answer": "Answer the following question: ", None: "", "sentiment": "What is the sentiment of the following text? "}
-    fewshot_prompt_eval = "True or False, The following statment has a positive sentiment: "
+    fewshot_eval_prompt = "True or False, The following statment has a positive sentiment: "
 
     def setupstandard(self, name, save=True, prompt_task=None):
         train = pd.read_csv(f"{data_dir}/base/{name}_train.csv")
@@ -1627,9 +1631,9 @@ def fewshot_setup_all(model_save_name="Llama-3.1-8B-Instruct"):
     task_datasets = {
         #nei: ["healthver", "squad"], 
         #unanswerable: ["qnota", "selfaware", "known_unknown", "climate_fever"],
-        confidence: ["mmlu", "cosmoqa", "piqa", "arc", "medmcqa", "commonsenseqa", "openbookqa", "qasc", "hellaswag", "bigbenchhard", "truthfulqa"],
+        confidence: ["mmlu", "cosmoqa", "piqa", "arc", "medmcqa", "commonsenseqa", "openbookqa", "qasc", "hellaswag", "bigbenchhard_mcq", "truthfulqa"],
         #news_topic: ["agnews", "bbcnews", "nytimes"],
-        sentiment: ["amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5"],
+        sentiment: ["amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment_eng", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5"],
         truthfulness: ["felm", "healthver", "climate_fever", "averitec", "fever", "factool", "truthfulqa_gen"]
         }
     for task, datasets in task_datasets.items():

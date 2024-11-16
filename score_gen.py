@@ -36,7 +36,10 @@ def generate_hash(data, max_length=10):
 def main(file, metric_name, prompt_column, generation_column, reference_column, output_column, use_prompt, overwrite, binarize_threshold):
     if reference_column == "none":
         reference_column = None
-    df = pd.read_csv(file)
+    try:
+        df = pd.read_csv(file)
+    except:
+        df = pd.read_csv(file, lineterminator="\n")
     if generation_column not in df.columns:
         raise ValueError(f"Input column {generation_column} not found in dataframe with columns {df.columns}")
     if reference_column is not None and reference_column not in df.columns:
