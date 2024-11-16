@@ -116,7 +116,7 @@ def do_fewshot_pred(base_path):
         warnings.warn(f"No models found in {base_path}. Exiting ...")
         return
     data = []
-    columns = ["model", "task", "dataset", "text", "label", "fewshot_pred"]
+    columns = ["model", "task", "dataset", "label", "fewshot_pred"]
     for model_save_name in model_options:
         task_options = os.listdir(os.path.join(base_path, model_save_name))
         if len(task_options) == 0:
@@ -141,8 +141,10 @@ def do_fewshot_pred(base_path):
                         break
                 if flag:
                     continue
+                label_col = "label"
                 for i, row in df.iterrows():
-                    data.append([model_save_name, task, dataset_name, row["label"], row["fewshot_pred"]])
+
+                    data.append([model_save_name, task, dataset_name, row[label_col], row["fewshot_pred"]])
     df = pd.DataFrame(data, columns=columns)
     df["fewshot_correct"] = df["label"] == df["fewshot_pred"]
     return df
