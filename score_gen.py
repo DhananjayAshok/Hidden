@@ -238,8 +238,14 @@ class UnanswerablePromptHolder(PromptHolder):
         super().__init__(system_prompt, instance_queries, instance_answers)
 
 class PseudoLabel:
+    def __init__(self, prompt_engine_name, batch_size):
+        self.prompt_engine = get_prompt_engine(prompt_engine_name)
+        self.batch_size = batch_size
+
     def __call__(self, texts, labels, filehash=None):
         batch_size = self.batch_size
+        if batch_size is None:
+            batch_size = len(texts)
         scores = []
         for i in range(0, len(texts), batch_size):
             batch_texts = texts[i:i+batch_size]
@@ -294,9 +300,7 @@ class PseudoLabel:
 
 class UnanswerablePseudoLabel(PseudoLabel):
     def __init__(self, prompt_engine_name, batch_size=None):
-        super().__init__()
-        self.batch_size = batch_size
-        self.prompt_engine = get_prompt_engine(prompt_engine_name)
+        super().__init__(prompt_engine_name, batch_size)
         self.prompt_holder = UnanswerablePromptHolder()
         self.parse_fn = self.parse_yes_no
 
