@@ -33,4 +33,5 @@ source proj_params.sh
 model_save_name="${model_name#*/}"
 logfile=$LOG_DIR/probe_ood/$model_save_name/$run_name/$model_kind/train_${random_sample_train_per}-seed_${random_seed}.log
 echo "XXXXXXXXXXXXXXX Running OOD for $task XXXXXXXXXXXXXXXXXXX"
+mkdir -p $(dirname $logfile)
 python ood_modeling.py $taskdata --model_save_name $model_save_name --random_sample_train_per $random_sample_train_per --random_sample_test_per $random_sample_test_per --random_seed $random_seed --strict_w_dataset $strict_w_dataset --strict_w_task $strict_w_task --mix_iid_n $mix_iid_n --model_kind $model_kind > $logfile
