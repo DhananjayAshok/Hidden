@@ -30,6 +30,7 @@ def save_df(df, savepath, save=True, dropnan_cols=None, max_rows=None):
             nan_cols = df[dropnan_cols].isna().any(axis=1)
             df = df[~nan_cols].reset_index(drop=True)
         if max_rows is not None:
+            max_rows = min(max_rows, len(df))
             df = df.sample(n=max_rows, random_state=global_random_seed).reset_index(drop=True)
         if not os.path.exists(os.path.dirname(savepath)):
             print(f"Creating directory {os.path.dirname(savepath)}")
@@ -972,7 +973,7 @@ class Unanswerable:
             train["text_only"] = train["text"].apply(lambda x: x.split("\nClaim:")[-1].split("\nAnswer:")[0])
             valid["text_only"] = valid["text"].apply(lambda x: x.split("\nClaim:")[-1].split("\nAnswer:")[0])
         sample_options = train.index
-        for i in range(len(valid)):
+        for i in tqdm(range(len(valid))):
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = self.fewshot_eval_prompt
@@ -1023,7 +1024,7 @@ class NEI:
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
         sample_options = train.index
-        for i in range(len(valid)):
+        for i in tqdm(range(len(valid))):
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = self.fewshot_eval_prompt
@@ -1095,7 +1096,7 @@ class NewsTopic:
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
         sample_options = train.index
-        for i in range(len(valid)):
+        for i in tqdm(range(len(valid))):
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = self.fewshot_eval_prompt
@@ -1183,7 +1184,7 @@ class Sentiment:
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
         sample_options = train.index
-        for i in range(len(valid)):
+        for i in tqdm(range(len(valid))):
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = Sentiment.fewshot_eval_prompt
@@ -1357,7 +1358,7 @@ class Confidence:
         train["question_only"] = train["text"].apply(lambda x: x.split("Question:")[-1].split("Answer:")[0].strip())
         valid["question_only"] = valid["text"].apply(lambda x: x.split("Question:")[-1].split("Answer:")[0].strip())
         sample_options = train.index
-        for i in range(len(valid)):
+        for i in tqdm(range(len(valid))):
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = Confidence.fewshot_eval_prompt
@@ -1475,7 +1476,7 @@ class Truthfullness:
         sample_options = train.index
         train["label"] = train["label"].astype(bool)
         valid["label"] = valid["label"].astype(bool)
-        for i in range(len(valid)):
+        for i in tqdm(range(len(valid))):
             prompt_candidates = np.random.choice(sample_options, k, replace=False)
             prompt_selected = train.loc[prompt_candidates].reset_index(drop=True)
             prompt = Truthfullness.fewshot_eval_system_prompt
