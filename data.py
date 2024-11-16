@@ -24,28 +24,33 @@ maximum_train_size = 5000 # Will never save more than this number of training ex
 global_random_seed = 42
 np.random.seed(global_random_seed)
 
+def save_df(df, savepath, save=True, dropnan_cols=None, max_rows=None):
+    if save:
+        if dropnan_cols is not None:
+            nan_cols = df[dropnan_cols].isna().any(axis=1)
+            df = df[~nan_cols].reset_index(drop=True)
+        if max_rows is not None:
+            df = df.sample(n=max_rows, random_state=global_random_seed).reset_index(drop=True)
+        if not os.path.exists(os.path.dirname(savepath)):
+            print(f"Creating directory {os.path.dirname(savepath)}")
+            os.makedirs(os.path.dirname(savepath))
+        df.to_csv(savepath, index=False)
+
+
 def save_dfs(train, valid, dataset_name, taskname, prompt_task=None, dropnan_cols=None):
     if prompt_task is None:
         prompt_task = ""
     else:
         prompt_task = "_"+prompt_task
-    if not os.path.exists(f"{data_dir}/{taskname}{prompt_task}/"):
-        os.makedirs(f"{data_dir}/{taskname}{prompt_task}/")
-    if dropnan_cols is not None:
-        nan_cols = train[dropnan_cols].isna().any(axis=1)
-        train = train[~nan_cols].reset_index(drop=True)
-        valid = valid[~valid[dropnan_cols].isna().any(axis=1)].reset_index(drop=True)
-    if maximum_train_size is not None:
-        if len(train) > maximum_train_size:
-            train = train.sample(n=maximum_train_size, random_state=global_random_seed).reset_index(drop=True)
-    train.to_csv(f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_train.csv", index=False)
-    valid.to_csv(f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_test.csv", index=False)
+    save_df(train, f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_train.csv", dropnan_cols=dropnan_cols, max_rows=maximum_train_size)
+    save_df(valid, f"{data_dir}/{taskname}{prompt_task}/{dataset_name}_test.csv", dropnan_cols=dropnan_cols)
 
 def get_results_df(model_save_name, taskname, dataset):
-    train = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_train.csv")
-    valid = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_test.csv")
+    train = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_train_inference.csv")
+    valid = pd.read_csv(f"{results_dir}/{model_save_name}/{taskname}/{dataset}_test_inference.csv")
     train["label"] = train["label"].astype(bool)
     valid["label"] = valid["label"].astype(bool)
+    return train, valid
 
 
 
@@ -886,7 +891,7 @@ class Jailbreak:
 
 class Unanswerable:
     taskname = "unanswerable"
-    few_shot_eval_prompt = "True or False, The question or claim below is fundamentally not objectively answerable or verifiable: "
+    fewshot_eval_prompt = "True or False, The question or claim below is fundamentally not objectively answerable or verifiable: "
     
     def setupqnota(self, save=True, random_seed=42):
         files = ["incomplete_questions", "futuristic_questions", "unmeasurable_questions"]
@@ -977,8 +982,7 @@ class Unanswerable:
                 prompt = prompt + statement_component + answer_component
             own_statement_component = f"\nSentence: {valid.loc[i, 'text_only']}"
             valid.loc[i, "text"] = prompt + own_statement_component + "\nAnswer: "
-        if save:
-            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", index=False)
+        save_df(valid, f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", save=save)
         return valid
 
 
@@ -1029,8 +1033,7 @@ class NEI:
                 prompt = prompt + statement_component + answer_component
             own_statement_component = f"\nSnippet: {valid.loc[i, 'text']}"
             valid.loc[i, "text"] = prompt + own_statement_component + "\nAnswer: "
-        if save:
-            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", index=False)
+        save_df(valid, f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", save=save)
         return valid
 
 class NewsTopic:
@@ -1102,8 +1105,7 @@ class NewsTopic:
                 prompt = prompt + statement_component + answer_component
             own_statement_component = f"\nSnippet: {valid.loc[i, 'text']}"
             valid.loc[i, "text"] = prompt + own_statement_component + "\nAnswer: "
-        if save:
-            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", index=False)
+        save_df(valid, f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", save=save)
         return valid
 
 
@@ -1191,8 +1193,7 @@ class Sentiment:
                 prompt = prompt + statement_component + answer_component
             own_statement_component = f"\nStatement: {valid.loc[i, 'text']}"
             valid.loc[i, "text"] = prompt + own_statement_component + "\nAnswer: "
-        if save:
-            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{Sentiment.taskname}/{dataset}_test.csv", index=False)
+        save_df(valid, f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", save=save)
         return valid
     
 
@@ -1368,8 +1369,7 @@ class Confidence:
             own_question_component = f"\nQuestion: {valid.loc[i, 'question_only']}"
             own_answer_component = f"\nAnswer: {valid.loc[i, 'output']}"
             valid.loc[i, "text"] = prompt + own_question_component + own_answer_component + "\nCorrect: "
-        if save:
-            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{Confidence.taskname}/{dataset}_test.csv", index=False)
+        save_df(valid, f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", save=save)
         return valid
     
 
@@ -1485,8 +1485,7 @@ class Truthfullness:
                 prompt = prompt + question_component + answer_component
             own_question_component = f"\nClaim: {valid.loc[i, 'text']}"
             valid.loc[i, "text"] = prompt + own_question_component + "\nAnswer: "
-        if save:
-            valid.to_csv(f"{data_dir}/fewshot_eval/{model_save_name}/{Truthfullness.taskname}/{dataset}_test.csv", index=False)
+        save_df(valid, f"{data_dir}/fewshot_eval/{model_save_name}/{self.taskname}/{dataset}_test.csv", save=save)
         return valid
     
 
