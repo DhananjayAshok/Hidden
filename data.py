@@ -994,7 +994,7 @@ class Unanswerable:
 
 class NEI:
     taskname = "nei"
-    few_shot_eval_prompt = "True or False, There is sufficient information in the evidence to verify the veracity of the claim: "
+    fewshot_eval_prompt = "True or False, There is sufficient information in the evidence to verify the veracity of the claim: "
 
     def setupsquad(self, save=True, random_seed=42):
         train = pd.read_csv(f"{data_dir}/base/squad_train.csv").sample(12_000, random_state=random_seed).reset_index(drop=True)
@@ -1630,7 +1630,7 @@ def fewshot_setup_all(model_save_name="Llama-3.1-8B-Instruct"):
     truthfulness = Truthfullness()
     task_datasets = {
         #nei: ["healthver", "squad"], 
-        #unanswerable: ["qnota", "selfaware", "known_unknown", "climate_fever"],
+        #unanswerable: ["qnota", "selfaware", "known_unknown", "climatefever"],
         confidence: ["mmlu", "cosmoqa", "piqa", "arc", "medmcqa", "commonsenseqa", "openbookqa", "qasc", "hellaswag", "bigbenchhard_mcq", "truthfulqa"],
         #news_topic: ["agnews", "bbcnews", "nytimes"],
         sentiment: ["amazonreviews", "yelp", "twitterfinance", "twittermteb", "auditorsentiment", "fiqa", "indosentiment_eng", "newsmtc", "imdb", "financial_phrasebank", "dair_emotion", "sst5"],

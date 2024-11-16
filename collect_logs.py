@@ -108,6 +108,65 @@ def do_iid_probe(base_path):
     return df
 
 
+def do_ood_probe(base_path):
+    model_options = os.listdir(base_path)
+    if len(model_options) == 0:
+        warnings.warn(f"No models found in {base_path}. Exiting ...")
+        return
+    
+    data = []
+    columns = ["model", "task", "dataset", "run_name", "model_kind", "n_train", "random_seed", "accuracy", "test_base_rate"]
+
+    for model_save_name in model_options:
+        for run_name in os.listdir(os.path.join(base_path, model_save_name)):
+            model_kind_options = os.listdir(os.path.join(base_path, model_save_name, run_name))
+            if len(model_kind_options) == 0:
+                warnings.warn(f"No model kinds found in {base_path}/{model_save_name}/{run_name}. Skipping ...")
+                continue          
+            for model_kind in model_kind_options:
+                file_options = os.listdir(os.path.join(base_path, model_save_name, run_name, model_kind))
+                if len(file_options) == 0:
+                    warnings.warn(f"No files found in {base_path}/{model_save_name}/{run_name}/{model_kind}. Skipping ...")
+                    continue
+                for file in file_options:
+                    filedata = file.split(".")[0].split("-")
+                    filepath = os.path.join(base_path, model_save_name, run_name, model_kind, file)
+                    assert "train" in filedata[0] and "seed" in filedata[1] and len(filedata) == 2
+                    n_train = int(filedata[0].split("_")[1])
+                    random_seed = int(filedata[1].split("_")[1])
+                    with open(filepath, "r") as f:
+                        lines = f.readlines()
+                    accuracy_lines = [line for line in lines if "Final Test Accuracy" in line]
+                    if len(accuracy_lines) == 0:
+                        warnings.warn(f"No accuracies found in {filepath}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
+                        continue
+                    tasks = []
+                    datasets = []
+                    accuracies = []
+                    for line in accuracy_lines:
+                        task = line.split("[TASK]")[1].split("[TASK]")[0]
+                        dataset = line.split("[DATASET]")[1].split("[DATASET]")[0]
+                        accuracy = float(line.split(": ")[1])
+                        tasks.append(task)
+                        datasets.append(dataset)
+                        accuracies.append(accuracy)
+                    base_rate_lines = [line for line in lines if "Base Rate" in line]                    
+                    if len(base_rate_lines) == 0:
+                        warnings.warn(f"No base rate found in {filepath}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
+                        continue
+                    if len(base_rate_lines) != len(accuracy_lines):
+                        warnings.warn(f"Base rate and accuracy lines do not match in {filepath}. {len(base_rate_lines), len(accuracy_lines)} Skipping ...")
+                        continue
+                    base_rates = [float(line.split(": ")[1]) for line in base_rate_lines]
+                    for task, dataset, accuracy, base_rate in zip(tasks, datasets, accuracies, base_rates):
+                        data.append([model_save_name, task, dataset, run_name, model_kind, n_train, random_seed, accuracy, base_rate])
+                        
+    df = pd.DataFrame(data, columns=columns)
+    df['baseline'] = df['test_base_rate'].apply(lambda x: max(x, 1-x))
+    df['advantage'] = df['accuracy'] - df['baseline']
+    return df
+    
+
 def do_fewshot_pred(base_path):
     # this one won't use base_path
     base_path = data_dir + "/fewshot_eval"

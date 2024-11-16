@@ -8,8 +8,6 @@ from vllm import LLM, SamplingParams
 
 open_ai_save_path = os.environ["OPENAI_SAVE_PATH"] 
 
-# TODO: 
-# Implement the automatic splitting of batches for OpenAI
 # Implement quantization for VLLM
 # Give OpenAIGPT a single function that can be called and will either save a batch or load it and return the results if completed
 
@@ -215,13 +213,10 @@ class OpenAIGPT:
 
 
 
-
-import time
-
 class VLLMModel:
     def __init__(self, model_name, max_new_tokens=10):
         self.model_name = model_name
-        self.model = LLM(model_name)
+        self.model = LLM(model_name, disable_log_stats=True)
         self.max_new_tokens = max_new_tokens
     
     def generate(self, prompts, max_new_tokens=None):
