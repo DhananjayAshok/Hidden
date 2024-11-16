@@ -216,7 +216,7 @@ class OpenAIGPT:
 
 
 
-
+import time
 
 class VLLMModel:
     def __init__(self, model_name, max_new_tokens=10):
@@ -228,7 +228,7 @@ class VLLMModel:
         if max_new_tokens is None:
             max_new_tokens = self.max_new_tokens
         sampling_params = SamplingParams(n=1, max_tokens=max_new_tokens)
-        all_output = self.model.generate(prompts, sampling_params)
+        all_output = self.model.generate(prompts, sampling_params, use_tqdm=False)
         outputs = []
         for output in all_output:
             outputs.append(output.outputs[0].text)

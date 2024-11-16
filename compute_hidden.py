@@ -111,7 +111,7 @@ def alt_save_hidden_states(obj, folder, end_idx, exists_ok=False):
                 filepath = f"{folder}/{end_idx - i}/{layer_key}/{hidden_key}.npy"
                 np.save(filepath, item)
     if len(existings) > 0:
-        warnings.warn(f"Overwrote existing files {existings.sorted()}")
+        warnings.warn(f"Overwrote existing files {sorted(existings)}")
     return
 
 

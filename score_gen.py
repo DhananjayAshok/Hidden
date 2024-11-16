@@ -247,7 +247,7 @@ class PseudoLabel:
         if batch_size is None:
             batch_size = len(texts)
         scores = []
-        for i in range(0, len(texts), batch_size):
+        for i in tqdm(range(0, len(texts), batch_size)):
             batch_texts = texts[i:i+batch_size]
             batch_labels = labels[i:i+batch_size]
             if filehash is None:

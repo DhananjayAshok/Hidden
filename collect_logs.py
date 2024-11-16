@@ -138,6 +138,7 @@ def do_fewshot_pred(base_path):
                 for i, row in df.iterrows():
                     data.append([model_save_name, task, dataset_name, row["label"], row["fewshot_pred"]])
     df = pd.DataFrame(data, columns=columns)
+    df["fewshot_correct"] = df["label"] == df["fewshot_pred"]
     return df
 
 if __name__ == "__main__":
