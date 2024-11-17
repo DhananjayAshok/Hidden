@@ -91,7 +91,7 @@ def main(task, dataset, model_save_name, prediction_dir, random_sample_train, ra
     X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train, task_offset=task_offset, random_seed=random_seed)
     X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test, task_offset=task_offset, random_seed=random_seed)
     model = get_model(model_kind)
-    train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test, verbose=True, prediction_dir=prediction_dir)
+    train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, verbose=True, prediction_dir=prediction_dir)
     return
     
 if __name__ == "__main__":
