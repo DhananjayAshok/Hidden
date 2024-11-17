@@ -5,13 +5,16 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-def set_tracking_config(config, track_layers=[2, 15, 30], track_mlp=True, track_attention=True, track_projection=False):
+def set_tracking_config(config, track_layers=[], track_mlp=False, track_attention=False, track_projection=False, shift_activations={}):
     config.track_layers = track_layers
     config.track_mlp = track_mlp
     config.track_attention = track_attention
     config.track_projection = track_projection
+    config.shift_activations = shift_activations
     for element in track_layers:
          assert 0<= element < config.num_hidden_layers+1
+    for key in shift_activations.keys():
+            assert 0<= key < config.num_hidden_layers+1
     return
           
 

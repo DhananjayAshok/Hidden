@@ -49,7 +49,7 @@ def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, 
     return X, y, df
 
 
-def do_model_fit(model, X_train, y_train, X_test, y_test, verbose=True):
+def do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, verbose=True, prediction_dir=None):
     model.fit(X_train, y_train)
     train_pred = model.predict_proba(X_train)
     test_pred = model.predict_proba(X_test)
@@ -65,17 +65,23 @@ def do_model_fit(model, X_train, y_train, X_test, y_test, verbose=True):
     if verbose:
         print(f"Base rate: {y_train.mean()} (Train), {y_test.mean()} (Test)")
         print(f"Final Test Accuracy: {test_acc}")
+    if prediction_dir is not None:
+        train_df["probe_prediction"] = train_pred
+        test_df["probe_prediction"] = test_pred
+        train_df.to_csv(f"{prediction_dir}/train_pred.csv", index=False)
+        test_df.to_csv(f"{prediction_dir}/test_pred.csv", index=False)
+        model.save(f"{prediction_dir}/")
     return train_pred, test_pred, test_acc
 
 @click.command()
 @click.option("--task", type=str, required=True)
 @click.option("--dataset", type=str, required=True)
-@click.option("--model_save_name", type=str, default=None)
-@click.option("--prediction_dir", type=str, default=None)
+@click.option("--model_save_name", type=str, required=True)
+@click.option('--prediction_dir', type=str, default=None)
 @click.option('--random_sample_train', type=int, default=None)
 @click.option('--random_sample_test', type=int, default=None)
 @click.option('--random_seed', type=int, default=42)
-@click.option('--model_kind', type=click.Choice(['linear', 'mlp', 'transformer'], case_sensitive=False), default="linear")
+@click.option('--model_kind', type=click.Choice(['linear', 'mean', 'mlp', 'transformer'], case_sensitive=False), default="linear")
 def main(task, dataset, model_save_name, prediction_dir, random_sample_train, random_sample_test, random_seed, model_kind):
     np.random.seed(random_seed)
     if prediction_dir is not None:
@@ -85,14 +91,7 @@ def main(task, dataset, model_save_name, prediction_dir, random_sample_train, ra
     X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train, task_offset=task_offset, random_seed=random_seed)
     X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test, task_offset=task_offset, random_seed=random_seed)
     model = get_model(model_kind)
-    train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test)
-    #print(f"Final Test Accuracy: {test_accuracy}")
-    if prediction_dir is not None:
-        train_df["probe_prediction"] = train_pred
-        test_df["probe_prediction"] = test_pred
-        train_df.to_csv(f"{prediction_dir}/train_pred.csv", index=False)
-        test_df.to_csv(f"{prediction_dir}/test_pred.csv", index=False)
-        model.save(f"{prediction_dir}/")
+    train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test, verbose=True, prediction_dir=prediction_dir)
     return
     
 if __name__ == "__main__":

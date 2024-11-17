@@ -11,6 +11,7 @@ data_dir = os.getenv("DATA_DIR")
 
 
 @click.command()
+@click.option("--run_name_base", type=str, required=True)
 @click.option("--task_datasets", type=(str, str), required=True, multiple=True)
 @click.option("--model_save_name", type=str, default=None)
 @click.option('--random_sample_train_per', type=int, default=None)
@@ -20,12 +21,12 @@ data_dir = os.getenv("DATA_DIR")
 @click.option('--strict_w_dataset', type=bool, default=False)
 @click.option('--strict_w_task', type=bool, default=False)
 @click.option('--mix_iid_n', type=int, default=0)
-def main(task_datasets, model_save_name, random_sample_train_per, random_sample_test_per, random_seed, model_kind, strict_w_task, strict_w_dataset, mix_iid_n):
+def main(run_name_base, task_datasets, model_save_name, random_sample_train_per, random_sample_test_per, random_seed, model_kind, strict_w_task, strict_w_dataset, mix_iid_n):
     assert len(task_datasets) > 1, "Must provide at least two task-dataset pairs for OOD training"
     np.random.seed(random_seed)
-    
     data = {}
     for task, dataset in task_datasets:
+        print(f"Loading {task} {dataset}")
         X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train_per, random_seed=random_seed)
         X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test_per, random_seed=random_seed)
         internal_data = {"X_train": X_train, "y_train": y_train, "train_df": train_df, "X_test": X_test, "y_test": y_test, "test_df": test_df}
@@ -53,13 +54,16 @@ def main(task_datasets, model_save_name, random_sample_train_per, random_sample_
         task = taskdata[0]
         dataset = taskdata[1]
         print(f"Fitting model for test: {taskdata}")
+        prediction_dir = f"{results_dir}/{model_save_name}/predictions/{run_name_base}/{task}/{dataset}/{model_kind}/train_{random_sample_train_per}-seed_{random_seed}/"    
+        if not os.path.exists(prediction_dir):
+            os.makedirs(prediction_dir)
         model = get_model(model_kind)
-        train_pred, test_pred, train_df, test_df, test_acc = fit_one_set(model, data, taskdata, strict_w_dataset, strict_w_task, mix_iid_n)
+        train_pred, test_pred, train_df, test_df, test_acc = fit_one_set(model, data, taskdata, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir)
         print(f"Final Test Accuracy for [TASK]{task}[TASK] [DATASET]{dataset}[DATASET]: {test_acc}")
         del model
     return
     
-def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_iid_n):
+def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir):
     train_datasets = []
     for taskdata in data:
         if taskdata == test_dataset:
@@ -88,7 +92,7 @@ def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_
     X_test = data[test_dataset]["X_test"]
     y_test = data[test_dataset]["y_test"]
     test_df = data[test_dataset]["test_df"]
-    train_pred, test_pred, test_acc = do_model_fit(model, X_train, y_train, X_test, y_test)
+    train_pred, test_pred, test_acc = do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, verbose=False, prediction_dir=prediction_dir)
     print(f"Test Base Rate for [TASK]{test_dataset[0]}[TASK] [DATASET]{test_dataset[1]}[DATASET]: {np.mean(y_test)}")
     return train_pred, test_pred, train_df, test_df, test_acc
     

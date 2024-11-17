@@ -115,10 +115,11 @@ def do_ood_probe(base_path):
         return
     
     data = []
-    columns = ["model", "task", "dataset", "run_name", "model_kind", "n_train", "random_seed", "accuracy", "test_base_rate"]
-
+    columns = ["model", "task", "dataset", "run_name_outer", "run_name_inner", "model_kind", "n_train", "random_seed", "accuracy", "test_base_rate"]
+    # $LOG_DIR/probe_ood/$model_save_name/$run_name/$model_kind/train_${random_sample_train_per}-seed_${random_seed}.log
     for model_save_name in model_options:
         for run_name in os.listdir(os.path.join(base_path, model_save_name)):
+            run_name_outer, run_name_inner = run_name.split("_")
             model_kind_options = os.listdir(os.path.join(base_path, model_save_name, run_name))
             if len(model_kind_options) == 0:
                 warnings.warn(f"No model kinds found in {base_path}/{model_save_name}/{run_name}. Skipping ...")
@@ -136,7 +137,7 @@ def do_ood_probe(base_path):
                     random_seed = int(filedata[1].split("_")[1])
                     with open(filepath, "r") as f:
                         lines = f.readlines()
-                    accuracy_lines = [line for line in lines if "Final Test Accuracy" in line]
+                    accuracy_lines = [line for line in lines if "Final Test Accuracy for" in line]
                     if len(accuracy_lines) == 0:
                         warnings.warn(f"No accuracies found in {filepath}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
                         continue
@@ -150,7 +151,7 @@ def do_ood_probe(base_path):
                         tasks.append(task)
                         datasets.append(dataset)
                         accuracies.append(accuracy)
-                    base_rate_lines = [line for line in lines if "Base Rate" in line]                    
+                    base_rate_lines = [line for line in lines if "Base Rate for" in line]                    
                     if len(base_rate_lines) == 0:
                         warnings.warn(f"No base rate found in {filepath}. Make sure its still running and there hasn't been a more fundamental issue. Skipping ...")
                         continue
@@ -159,7 +160,7 @@ def do_ood_probe(base_path):
                         continue
                     base_rates = [float(line.split(": ")[1]) for line in base_rate_lines]
                     for task, dataset, accuracy, base_rate in zip(tasks, datasets, accuracies, base_rates):
-                        data.append([model_save_name, task, dataset, run_name, model_kind, n_train, random_seed, accuracy, base_rate])
+                        data.append([model_save_name, task, dataset, run_name_outer, run_name_inner, model_kind, n_train, random_seed, accuracy, base_rate])
                         
     df = pd.DataFrame(data, columns=columns)
     df['baseline'] = df['test_base_rate'].apply(lambda x: max(x, 1-x))

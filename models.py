@@ -5,14 +5,46 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 import torch
 import math
-
+import numpy as np
+import warnings
 
 def get_model(name):
     if name == "linear":
         return Linear()
+    elif name == "mean":
+        return MeanModel()
     else:
         raise ValueError(f"Model kind {name} not implemented")
     
+
+class MeanModel:
+    def fit(self, X_train, y_train):
+        y_train = y_train.astype(int)
+        positive_X = X_train[y_train == 1]
+        negative_X = X_train[y_train == 0]
+        self.positive_mean = positive_X.mean(axis=0)
+        self.negative_mean = negative_X.mean(axis=0)
+        mean_difference = self.positive_mean - self.negative_mean
+        self.mean_difference = mean_difference / np.linalg.norm(mean_difference)
+
+    def predict_proba(self, X):
+        dist_pos = np.linalg.norm(X - self.positive_mean, axis=1)
+        dist_neg = np.linalg.norm(X - self.negative_mean, axis=1)
+        return dist_neg / (dist_neg + dist_pos)
+    
+    def predict(self, X):
+        return self.predict_proba(X) > 0.5
+    
+    def save(self, path, name="model"):
+        np.save(path+f"/{name}_positive.npy", self.positive_mean)
+        np.save(path+f"/{name}_negative.npy", self.negative_mean)
+        np.save(path+f"/{name}.npy", self.mean_difference)
+
+    def load(self, path, name="model"):
+        self.positive_mean = np.load(path+f"/{name}_positive.npy")
+        self.negative_mean = np.load(path+f"/{name}_negative.npy")
+        self.mean_difference = np.load(path+f"/{name}.npy")
+
 
 class SKLearnModel:
     def fit(self, X_train, y_train):
@@ -25,7 +57,7 @@ class SKLearnModel:
         return self.model.predict_proba(X)[:, 1]
     
     def predict(self, X):
-        return self.model.predict(X) > 0.5
+        return self.predict_proba(X) > 0.5
     
     def save(self, path, name="model"):
         with open(path+f"/{name}.pkl", "wb") as f:
@@ -47,12 +79,21 @@ class Linear(SKLearnModel):
         self.name = f"linear-{penalty}-C-{C}"
         self.model = LogisticRegression(random_state=0, penalty=penalty, C=C, class_weight="balanced")
 
+    def save(self, path, name="model"):
+        with open(path+f"/{name}.pkl", "wb") as f:
+            pickle.dump(self.model, f)
+        self.save_weight(path, name=name)
+
+    def save_weight(self, path, name="weight"):
+        np.save(path+f"/{name}.npy", self.model.coef_)
+
+
 
 class RandomForest(SKLearnModel):
     def __init__(self, n_estimators=100, max_depth=None):
         self.name = f"rf-n-{n_estimators}-d-{max_depth}"
         self.model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth)
-
+    
 
 class MLP(SKLearnModel):
     def __init__(self, hidden_layer_sizes=(5000,), activation='relu', solver='adam', alpha=0.0001, lr=0.001):
