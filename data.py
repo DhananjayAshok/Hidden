@@ -344,6 +344,8 @@ def process_twitterfinance():
         df["idx"] = df.index
         df["text"] = df["text"].apply(remove_urls)
         df["label"] = df["label"] == 2
+        textna = df["text"].isna()
+        df = df[~textna].reset_index(drop=True)
         return df[["idx", "text", "label"]]
     train = proc_df(ds["train"].to_pandas())
     valid = proc_df(ds["validation"].to_pandas())
@@ -864,6 +866,10 @@ def process_faithbench(random_seed=42, save=True):
 
 #endregion
 
+def get_first_portion(text, frac=0.2):
+    n_words = len(text.split())
+    n_use = int(n_words * frac)
+    return " ".join(text.split()[:n_use])
 
 
 class ToxicityAvoidance:
@@ -1000,6 +1006,7 @@ class NEI:
         train = pd.read_csv(f"{data_dir}/base/squad_train.csv").sample(12_000, random_state=random_seed).reset_index(drop=True)
         valid = pd.read_csv(f"{data_dir}/base/squad_test.csv")
         def proc_df(df):
+            df["prompt"] = "Ask a question based on the following context:" + "\nContext: " + df["context"] + "\nQuestion: "
             df["text"] = "Answer the following question: \nQuestion: " + df["text"] + "\nAnswer: "
             df["label"] = df["unanswerable"].astype(int)
             return df[["idx", "text", "label"]]
@@ -1014,6 +1021,7 @@ class NEI:
         train = pd.read_csv(f"{data_dir}/base/healthver_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/healthver_test.csv")
         def proc_df(df):
+            df["prompt"] = "Make either a true or false claim based on the following evidence" + "\nEvidence: " + df["evidence"] + "\nClaim: "
             df["text"] = "The following claim is either TRUE or FALSE. Which is it?\n" + df["text"] + "\nAnswer: "
             df["label"] = df["unanswerable"].astype(int)
             return df[["idx", "text", "label"]]
@@ -1046,11 +1054,13 @@ class NewsTopic:
     prompt_task_dict = {"summ": "Summarize the following news article: ", "answer": "Answer the question using information from the news article: "
                         , "question" : "Ask a question based on the news article: ", None: "", "topic": "What is the topic of the following news article? "}
     fewshot_eval_prompt = "True or False, The following news snippet has a tech or science topic: "
+    intervention_prompt = "Continue the article: "
 
     def setupagnews(self, save=True, prompt_task=None):
         train = pd.read_csv(f"{data_dir}/base/agnews_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/agnews_test.csv")
         def proc_df(df):
+            df["prompt"] = NewsTopic.intervention_prompt + df["text"].apply(get_first_portion) 
             df["text"] = NewsTopic.prompt_task_dict[prompt_task] + df["text"] + "\n"
             keep_topics = ["Business", "Sci/Tech"]
             df = df[df["label_text"].isin(keep_topics)].reset_index(drop=True)
@@ -1067,6 +1077,7 @@ class NewsTopic:
         train = pd.read_csv(f"{data_dir}/base/bbcnews_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/bbcnews_test.csv")
         def proc_df(df):
+            df["prompt"] = NewsTopic.intervention_prompt + df["text"].apply(get_first_portion) 
             df["text"] = NewsTopic.prompt_task_dict[prompt_task] + df["text"] + "\n"
             keep_topics = ["business", "tech"]
             df = df[df["label_text"].isin(keep_topics)].reset_index(drop=True)
@@ -1083,6 +1094,7 @@ class NewsTopic:
         train = pd.read_csv(f"{data_dir}/base/nytimes_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/nytimes_test.csv")
         def proc_df(df):
+            df["prompt"] = NewsTopic.intervention_prompt + df["text"].apply(get_first_portion) 
             df["text"] = NewsTopic.prompt_task_dict[prompt_task] + df["text"] + "\n"
             keep_topics = ["Science", "Real Estate", "Economy", "Technology", "Your Money", "Global Business"]
             df = df[df["section"].isin(keep_topics)].reset_index(drop=True)
@@ -1118,11 +1130,13 @@ class Sentiment:
     taskname = "sentiment"
     prompt_task_dict = {"speaker": "Speaker 1: ", "question": "Ask a question based on the following prompt: ", "answer": "Answer the following question: ", None: "", "sentiment": "What is the sentiment of the following text? "}
     fewshot_eval_prompt = "True or False, The following statment has a positive sentiment: "
+    intervention_prompt = "Continue the statement: "
 
     def setupstandard(self, name, save=True, prompt_task=None):
         train = pd.read_csv(f"{data_dir}/base/{name}_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/{name}_test.csv")
         def proc_df(df):
+            df["prompt"] = self.intervention_prompt + df["text"].apply(get_first_portion) 
             df["text"] = Sentiment.prompt_task_dict[prompt_task] + df["text"]
             df["label"] = df["label"].astype(int)
             return df[["idx", "text", "label"]]
@@ -1284,6 +1298,7 @@ class Confidence:
                 choices, answer = randomize_choices(df.loc[i, "choices"], df.loc[i, "answer"], force_total=force_total)
                 own_choices_component = choices_to_text(choices)
                 df.loc[i, "text"] = prompt + own_question_component + own_choices_component + "\nAnswer: "
+                df.loc[i, "prompt"] = df.loc[i, "text"]
                 df.loc[i, "gold"] = int_to_letter(answer)
             return df
         train = proc_df(train)
@@ -1382,12 +1397,14 @@ class Truthfullness:
     taskname = "truthfullness"
     prompt_task_dict = {"speaker": "Speaker 1: ", None: "", "truth": "Is the following claim true?: "}
     fewshot_eval_system_prompt = "Is the following claim true?: "
+    intervention_prompt = "Continue the claim: "
 
     def setup_felm(self, save=True, prompt_task=None):
         train = pd.read_csv(f"{data_dir}/base/felm_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/felm_test.csv")
         def proc_df(df):
             df['labels'] = df['labels'].apply(eval)
+            df["prompt"] = df["prompt"]
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["text"]
             df['label'] = df['labels'].apply(all).astype(int)
             return df[["idx", "text", "label"]]
@@ -1401,6 +1418,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/healthver_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/healthver_test.csv")
         def proc_df(df):
+            df["prompt"] = self.intervention_prompt + df["claim"].apply(get_first_portion)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
             df['label'] = (df['label'] == "Supports").astype(int)
             return df[["idx", "text", "label"]]
@@ -1414,6 +1432,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/climatefever_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/climatefever_test.csv")
         def proc_df(df):
+            df["prompt"] = self.intervention_prompt + df["claim"].apply(get_first_portion)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
             df['label'] = (df['label'] == 0).astype(int)
             return df[["idx", "text", "label"]]
@@ -1427,6 +1446,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/averitec_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/averitec_test.csv")
         def proc_df(df):
+            df["prompt"] = self.intervention_prompt + df["claim"].apply(get_first_portion)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
             df['label'] = (df['label'] == "Supported").astype(int)
             return df[["idx", "text", "label"]]
@@ -1440,6 +1460,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/fever_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/fever_test.csv")
         def proc_df(df):
+            df["prompt"] = self.intervention_prompt + df["claim"].apply(get_first_portion)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
             df['label'] = (df['label'] == "SUPPORTS").astype(int)
             return df[["idx", "text", "label"]]
@@ -1453,6 +1474,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/factool_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/factool_test.csv")
         def proc_df(df):
+            df["prompt"] = self.intervention_prompt + df["claim"].apply(get_first_portion)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
             df['label'] = df['label'].astype(int)
             return df[["idx", "text", "label"]]
@@ -1466,6 +1488,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/truthfulqa_gen_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/truthfulqa_gen_test.csv")
         def proc_df(df):
+            df["prompt"] = df["question"]
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["question"] + " " + df["claim"]
             df['label'] = df['label'].astype(int)
             return df[["idx", "text", "label"]]
@@ -1642,4 +1665,5 @@ def fewshot_setup_all(model_save_name="Llama-3.1-8B-Instruct"):
 
 
 if __name__ == "__main__":
-    fewshot_setup_all()
+    process_twitterfinance()
+    setup_batch([0, 1, 3])

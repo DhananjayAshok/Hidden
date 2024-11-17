@@ -38,7 +38,11 @@ def main(model_name, data_path, intervention_vector_path, intervention_layer, in
     except:
         assert "indosentiment" in data_path
         data_df = pd.read_csv(data_path, lineterminator="\n")
-    assert "text" in data_df.columns
+    assert "text" in data_df.columns or "prompt" in data_df.columns
+    if "prompt" in data_df.columns:
+        text_col = "prompt"
+    else:
+        text_col = "text"
     data_df["output"] = None
     model = AutoModelForCausalLM.from_pretrained(model_name, config=config, device_map="auto")
     if stop_idx is not None:
@@ -46,7 +50,7 @@ def main(model_name, data_path, intervention_vector_path, intervention_layer, in
     else:
         stop_idx = len(data_df)
     for i in tqdm(range(start_idx, stop_idx)):
-        prompt = data_df.loc[i, "text"]
+        prompt = data_df.loc[i, text_col]
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         input_length = inputs["input_ids"].shape[1]
         output = model.generate(**inputs, max_new_tokens=max_new_tokens, stop_strings=stop_strings, pad_token_id=tokenizer.eos_token_id, tokenizer=tokenizer)
