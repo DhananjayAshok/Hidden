@@ -1133,6 +1133,8 @@ class Sentiment:
         train = pd.read_csv(f"{data_dir}/base/{name}_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/{name}_test.csv")
         def proc_df(df):
+            nan_rows = df["text"].isna()
+            df = df[~nan_rows].reset_index(drop=True)
             df["prompt"] = self.intervention_prompt + df["text"].apply(get_first_portion) 
             df["text"] = Sentiment.prompt_task_dict[prompt_task] + df["text"]
             df["label"] = df["label"].astype(int)
