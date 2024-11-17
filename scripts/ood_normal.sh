@@ -32,7 +32,7 @@ run_name_base="ood-default"
 for key in "${!all_array[@]}"
 do
     run_name="${run_name_base}_${key}"
-    tasks_and_datasets=${all_array[$key]}
+    declare -n tasks_and_datasets=${all_array[$key]}
     taskdata=""
 
     for task in "${!tasks_and_datasets[@]}"
