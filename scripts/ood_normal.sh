@@ -16,6 +16,7 @@ for ood_config_file in "${ood_config_files[@]}"
 do
     source scripts/$run_name_base-config/${ood_config_file}.sh # this defines the key and tasks_and_datasets variables
     run_name="${run_name_base}_${key}"
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXX $run_name XXXXXXXXXXXXXXXXXXXXXXXXXX
     taskdata=""
     for task in "${!tasks_and_datasets[@]}"
     do
