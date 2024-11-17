@@ -1445,6 +1445,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/averitec_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/averitec_test.csv")
         def proc_df(df):
+            df = df[~df[["claim", "label"]].isna().any(axis=1)].reset_index(drop=True)
             df["prompt"] = self.intervention_prompt + df["claim"].apply(get_first_portion)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
             df['label'] = (df['label'] == "Supported").astype(int)
@@ -1459,6 +1460,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/fever_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/fever_test.csv")
         def proc_df(df):
+            df = df[~df[["claim", "label"]].isna().any(axis=1)].reset_index(drop=True)
             df["prompt"] = self.intervention_prompt + df["claim"].apply(get_first_portion)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
             df['label'] = (df['label'] == "SUPPORTS").astype(int)
@@ -1473,6 +1475,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/factool_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/factool_test.csv")
         def proc_df(df):
+            df = df[~df[["claim", "label"]].isna().any(axis=1)].reset_index(drop=True)
             df["prompt"] = self.intervention_prompt + df["claim"].apply(get_first_portion)
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["claim"]
             df['label'] = df['label'].astype(int)
