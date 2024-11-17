@@ -1068,7 +1068,6 @@ class NewsTopic:
             return df[["idx", "text", "label"]]
         train = proc_df(train)
         valid = proc_df(valid)
-        prompt_task = "_"+prompt_task if prompt_task is not None else ""
         if save:
             save_dfs(train, valid, "agnews", self.taskname, prompt_task)
         return train, valid
@@ -1085,7 +1084,6 @@ class NewsTopic:
             return df[["idx", "text", "label"]]
         train = proc_df(train)
         valid = proc_df(valid)
-        prompt_task = "_"+prompt_task if prompt_task is not None else ""
         if save:
             save_dfs(train, valid, "bbcnews", self.taskname, prompt_task)
         return train, valid
@@ -1102,7 +1100,6 @@ class NewsTopic:
             return df[["idx", "text", "label"]]
         train = proc_df(train)
         valid = proc_df(valid)
-        prompt_task = "_"+prompt_task if prompt_task is not None else ""
         if save:
             save_dfs(train, valid, "nytimes", self.taskname, prompt_task)
         return train, valid
