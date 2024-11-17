@@ -40,6 +40,11 @@ def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, 
     end_idx = -1
     X, keep_indices = alt_load_hidden_states(f"{hidden_states_dir}/{split}/{dataset}/", start_idx=start_idx, end_idx=end_idx, include_files=indices, task_offset=task_offset)
     df = df.loc[keep_indices].reset_index(drop=True)
+    if df["label"].isnull().sum() > 0:
+        raise ValueError(f"Found {df['label'].isnull().sum()} null labels in {dataset}_{split}_inference.csv")
+    if df["label"].nunique() != 2:
+        warnings.warn(f"Found {df['label'].nunique()} unique labels in {dataset}_{split}_inference.csv. This is not a binary classification task.")
+    df["label"] = df["label"].astype(int)
     y = df["label"].values
     return X, y, df
 
