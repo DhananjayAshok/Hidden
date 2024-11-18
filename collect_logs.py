@@ -21,7 +21,7 @@ def main(experiment):
     if experiment == "fewshot_pred":
         df = do_fewshot_pred(base_path)
     elif experiment == "probe_ood":
-        raise NotImplementedError
+        df = do_ood_probe(base_path)
     else:
         raise NotImplementedError
     df.to_csv(report_file, index=False)
