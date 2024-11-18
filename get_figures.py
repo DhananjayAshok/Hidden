@@ -116,8 +116,8 @@ if __name__ == "__main__":
     fewshot_agg = fewshot_df.groupby(["model", "task", "dataset"])["fewshot_correct"].mean()
     augment_ood(ood_df, iid_df)
     augment_w_fewshot(iid_df, fewshot_agg)
-    for plot_metric in ["accuracy", "advantage"]:
-        plot_metric(iid_df, plot_metric)
-        plot_metric(ood_df, plot_metric, "ood")
-        plot_iid_ood(iid_df, ood_df, plot_metric)
+    for plot_col in ["accuracy", "advantage"]:
+        plot_metric(iid_df, plot_col)
+        plot_metric(ood_df, plot_col, "ood")
+        plot_iid_ood(iid_df, ood_df, plot_col)
 
