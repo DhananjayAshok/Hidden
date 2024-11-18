@@ -245,12 +245,12 @@ def do_fewshot_corr(base_path):
                 if len(datasets) == 0:
                     print(f"No datasets found in {prediction_dir}/{run_name_base}/{task}. Skipping ...")
                     continue
-                condition = (fewshot_df["model"] == model_save_name) & ((fewshot_df["task"] == task) & (fewshot_df["dataset"] == dataset))
-                fewshot_subset = fewshot_df[condition]
-                if len(fewshot_subset) == 0:
-                    print(f"No fewshot data found for {model_save_name}, {task}, {dataset}. Skipping ...")
-                    continue
                 for dataset in datasets:
+                    condition = (fewshot_df["model"] == model_save_name) & ((fewshot_df["task"] == task) & (fewshot_df["dataset"] == dataset))
+                    fewshot_subset = fewshot_df[condition]
+                    if len(fewshot_subset) == 0:
+                        print(f"No fewshot data found for {model_save_name}, {task}, {dataset}. Skipping ...")
+                        continue
                     model_kinds = os.listdir(os.path.join(prediction_dir, run_name_base, task, dataset))
                     if len(model_kinds) == 0:
                         print(f"No model kinds found in {prediction_dir}/{run_name_base}/{task}/{dataset}. Skipping ...")
