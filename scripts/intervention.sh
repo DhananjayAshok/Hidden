@@ -18,7 +18,7 @@ source_model_kind="linear"
 
 
 
-declare -A max_new_token_dict=( ["confidence"]=5 ["unanswerable"]=1 ["toxicity_avoidance"]=20 ["sentiment"]=1 ["truthfullness"]=1 ["nei"]=1 ["newstopic"]=1)
+declare -A max_new_token_dict=( ["confidence"]=5 ["unanswerable"]=10 ["toxicity_avoidance"]=20 ["sentiment"]=10 ["truthfullness"]=10 ["nei"]=10 ["newstopic"]=10)
 source proj_params.sh
 model_save_name="${model_name#*/}"
 source_weight_path_start=$RESULTS_DIR/$model_save_name/predictions/$source_run_name/
