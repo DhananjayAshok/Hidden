@@ -16,13 +16,12 @@ source_random_seed=42
 source_random_sample_train=2000
 source_model_kind="linear"
 
-source_weight_path_start=$RESULTS_DIR/$model_save_name/predictions/$source_run_name/
 
 
 declare -A max_new_token_dict=( ["confidence"]=5 ["unanswerable"]=1 ["toxicity_avoidance"]=20 ["sentiment"]=1 ["truthfullness"]=1 ["nei"]=1 ["newstopic"]=1)
 source proj_params.sh
 model_save_name="${model_name#*/}"
-
+source_weight_path_start=$RESULTS_DIR/$model_save_name/predictions/$source_run_name/
 
 for task in "${!tasks_and_datasets[@]}"
 do

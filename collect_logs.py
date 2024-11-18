@@ -247,7 +247,7 @@ def do_fewshot_corr(base_path):
                     continue
                 for dataset in datasets:
                     condition = (fewshot_df["model"] == model_save_name) & ((fewshot_df["task"] == task) & (fewshot_df["dataset"] == dataset))
-                    fewshot_subset = fewshot_df[condition]
+                    fewshot_subset = fewshot_df[condition].reset_index(drop=True)
                     if len(fewshot_subset) == 0:
                         print(f"No fewshot data found for {model_save_name}, {task}, {dataset}. Skipping ...")
                         continue
