@@ -23,7 +23,7 @@ def augment_ood(ood_df, iid_df):
             condition = ((iid_df["task"] == task) & (iid_df["dataset"] == dataset) & (iid_df["model"] == model))
             iid_info_df = iid_df[condition]
             if len(iid_info_df) == 0:
-                warnings.warn(f"Task {task} and {dataset} not found in IID data for model {model}. Skipping...")
+                print(f"Task {task} and {dataset} not found in IID data for model {model}. Skipping...")
                 continue
             ood_df.loc[i, f"{plot_col}_iid"] = iid_info_df.iloc[0][plot_col]
 
@@ -88,7 +88,7 @@ def plot_iid_ood(iid_df, ood_df, plot_col):
         condition = ((ood_df["task"] == task) & (ood_df["dataset"] == dataset) & (ood_df["model"] == model))
         ood_info_df = ood_df[condition]
         if len(ood_info_df) == 0:
-            warnings.warn(f"Task {task} and {dataset} not found in OOD data for model {model}. Skipping...")
+            print(f"Task {task} and {dataset} not found in OOD data for model {model}. Skipping...")
             continue
         iid_df.loc[i, f"{plot_col}_ood_penalty"] = row[plot_col] - ood_info_df.iloc[0][plot_col]
 
@@ -116,6 +116,7 @@ if __name__ == "__main__":
     fewshot_agg = fewshot_df.groupby(["model", "task", "dataset"])["fewshot_correct"].mean()
     augment_ood(ood_df, iid_df)
     augment_w_fewshot(iid_df, fewshot_agg)
+    augment_w_fewshot(ood_df, fewshot_agg)
     for plot_col in ["accuracy", "advantage"]:
         plot_metric(iid_df, plot_col)
         plot_metric(ood_df, plot_col, "ood")
