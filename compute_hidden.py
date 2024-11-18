@@ -189,10 +189,11 @@ def load_as_dict(files, filepath, state_processor, task_offset, exclude_layers, 
             hidden_states[layer_key] = {}
             hidden_keys = os.listdir(f"{filepath}/{file}/{layer_key}")
             for hidden_key in hidden_keys:
-                if hidden_key in exclude_hidden:
+                hidden_key_name = hidden_key.split(".")[0]
+                if hidden_key_name in exclude_hidden:
                     continue
                 item = np.load(f"{filepath}/{file}/{layer_key}/{hidden_key}")
-                hidden_states[layer_key][hidden_key.split(".")[0]] = item
+                hidden_states[layer_key][hidden_key_name] = item
         hidden_states = state_processor(hidden_states, task_offset=task_offset, strategy=strategy)
         hidden_states_list.append(hidden_states)
     return hidden_states_list
