@@ -13,7 +13,7 @@ results_dir = os.getenv("RESULTS_DIR")
 data_dir = os.getenv("DATA_DIR")
 
 
-def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, task_offset=0, random_seed=42):
+def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, task_offset=0, random_seed=42, only_mlp=False, only_attention=False, only_layer=None):
     assert split in ["train", "test"]
     hidden_states_dir = f"{results_dir}/{model_save_name}/{task}/"
     try:
@@ -38,7 +38,16 @@ def get_xydf(task, dataset, model_save_name, split="train", random_sample=None, 
     indices = list(df.index)
     start_idx = -2
     end_idx = -1
-    X, keep_indices = alt_load_hidden_states(f"{hidden_states_dir}/{split}/{dataset}/", start_idx=start_idx, end_idx=end_idx, include_files=indices, task_offset=task_offset)
+    exclude_layers = []
+    exclude_hidden = []
+    if only_mlp:
+        exclude_hidden = ["attention", "projection"]
+    if only_attention:
+        exclude_hidden = ["projection", "mlp"]
+    if only_layer is not None:
+        exclude_layers = [f"layer_{i}" for i in range(100) if i != only_layer]
+
+    X, keep_indices = alt_load_hidden_states(f"{hidden_states_dir}/{split}/{dataset}/", start_idx=start_idx, end_idx=end_idx, include_files=indices, task_offset=task_offset, exclude_layers=exclude_layers, exclude_hidden=exclude_hidden)
     df = df.loc[keep_indices].reset_index(drop=True)
     if df["label"].isnull().sum() > 0:
         raise ValueError(f"Found {df['label'].isnull().sum()} null labels in {dataset}_{split}_inference.csv")
@@ -82,7 +91,10 @@ def do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, ver
 @click.option('--random_sample_test', type=int, default=None)
 @click.option('--random_seed', type=int, default=42)
 @click.option('--model_kind', type=click.Choice(['linear', 'mean', 'mlp', 'transformer'], case_sensitive=False), default="linear")
-def main(task, dataset, model_save_name, prediction_dir, random_sample_train, random_sample_test, random_seed, model_kind):
+@click.option('--only_mlp', type=bool, default=False)
+@click.option('--only_attention', type=bool, default=False)
+@click.option('--only_layer', type=int, default=None)
+def main(task, dataset, model_save_name, prediction_dir, random_sample_train, random_sample_test, random_seed, model_kind,  only_mlp, only_attention, only_layer):
     np.random.seed(random_seed)
     if prediction_dir is not None:
         if not os.path.exists(prediction_dir):

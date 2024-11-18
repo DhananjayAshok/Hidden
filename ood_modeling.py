@@ -21,7 +21,10 @@ data_dir = os.getenv("DATA_DIR")
 @click.option('--strict_w_dataset', type=bool, default=False)
 @click.option('--strict_w_task', type=bool, default=False)
 @click.option('--mix_iid_n', type=int, default=0)
-def main(run_name_base, task_datasets, model_save_name, random_sample_train_per, random_sample_test_per, random_seed, model_kind, strict_w_task, strict_w_dataset, mix_iid_n):
+@click.option('--only_mlp', type=bool, default=False)
+@click.option('--only_attention', type=bool, default=False)
+@click.option('--only_layer', type=int, default=None)
+def main(run_name_base, task_datasets, model_save_name, random_sample_train_per, random_sample_test_per, random_seed, model_kind, strict_w_task, strict_w_dataset, mix_iid_n, only_mlp, only_attention, only_layer):
     assert len(task_datasets) > 1, "Must provide at least two task-dataset pairs for OOD training"
     np.random.seed(random_seed)
     data = {}
@@ -58,12 +61,12 @@ def main(run_name_base, task_datasets, model_save_name, random_sample_train_per,
         if not os.path.exists(prediction_dir):
             os.makedirs(prediction_dir)
         model = get_model(model_kind)
-        train_pred, test_pred, train_df, test_df, test_acc = fit_one_set(model, data, taskdata, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir)
+        train_pred, test_pred, train_df, test_df, test_acc = fit_one_set(model, data, taskdata, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir, only_mlp, only_attention, only_layer)
         print(f"Final Test Accuracy for [TASK]{task}[TASK] [DATASET]{dataset}[DATASET]: {test_acc}")
         del model
     return
     
-def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir):
+def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir, only_mlp, only_attention, only_layer):
     train_datasets = []
     for taskdata in data:
         if taskdata == test_dataset:
@@ -92,7 +95,7 @@ def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_
     X_test = data[test_dataset]["X_test"]
     y_test = data[test_dataset]["y_test"]
     test_df = data[test_dataset]["test_df"]
-    train_pred, test_pred, test_acc = do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, verbose=False, prediction_dir=prediction_dir)
+    train_pred, test_pred, test_acc = do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, verbose=False, prediction_dir=prediction_dir, only_mlp=only_mlp, only_attention=only_attention, only_layer=only_layer)
     print(f"Test Base Rate for [TASK]{test_dataset[0]}[TASK] [DATASET]{test_dataset[1]}[DATASET]: {np.mean(y_test)}")
     return train_pred, test_pred, train_df, test_df, test_acc
     
