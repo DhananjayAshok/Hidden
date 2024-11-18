@@ -9,7 +9,7 @@ sns.set_theme(style="whitegrid")
 
 logdir = os.environ["LOG_DIR"]
 reports_path = logdir + "/reports/"
-figure_path="figures"
+figure_path="figures/"
 os.makedirs(figure_path, exist_ok=True)
 
 show_figs = False
@@ -62,8 +62,8 @@ def plot_metric(df, plot_col="advantage", save_suffix="iid"):
         #plt.show()
         save_fig(figure_path + f"{model}/{save_suffix}_{plot_col}.png")
 
-        sns.scatterplot(x=f"fewshot_{plot_col}", y=plot_col, data=model_df)
-        plt.title(f"Relationship between Hidden Probe Performance and Fewshot Performance for {model}")
+        sns.scatterplot(x=f"fewshot_{plot_col}", y=plot_col, data=model_df, hue="task")
+        plt.title(f"Fewshot vs Hidden Probe Performance for {model}")
         plt.xlabel(f"Fewshot {plot_col[0].upper() + plot_col[1:]}")
         plt.ylabel(plot_col[0].upper() + plot_col[1:])
         #plt.show()
