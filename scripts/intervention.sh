@@ -30,7 +30,7 @@ do
     datasets=${tasks_and_datasets[$task]}
     for dataset in $datasets
     do
-        intervention_vector_path=$source_weight_path_start/$task/$dataset/$source_model_kind/train_${source_random_sample_train}-seed_${source_random_seed}/weight.npy
+        intervention_vector_path=$source_weight_path_start/$task/$dataset/$source_model_kind/train_${source_random_sample_train}-seed_${source_random_seed}/model.npy
         for split in "${splits[@]}"
         do
             echo "XXXXXXXXXXXXXXXX $task $dataset $split XXXXXXXXXXXXXXXX"

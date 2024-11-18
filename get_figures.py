@@ -43,6 +43,7 @@ def augment_w_fewshot(df, fewshot_agg):
 
 def save_fig(figpath):
     if show_figs:
+        print(f"Save this as: {figpath}")
         plt.show()
     else:
         if not os.path.exists(os.path.dirname(figpath)):

@@ -84,7 +84,7 @@ class Linear(SKLearnModel):
             pickle.dump(self.model, f)
         self.save_weight(path, name=name)
 
-    def save_weight(self, path, name="weight"):
+    def save_weight(self, path, name="model"):
         np.save(path+f"/{name}.npy", self.model.coef_)
 
 
