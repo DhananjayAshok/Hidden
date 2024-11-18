@@ -95,13 +95,14 @@ def do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, ver
 @click.option('--only_attention', type=bool, default=False)
 @click.option('--only_layer', type=int, default=None)
 def main(task, dataset, model_save_name, prediction_dir, random_sample_train, random_sample_test, random_seed, model_kind,  only_mlp, only_attention, only_layer):
+    assert not (only_mlp and only_attention), "Cannot specify both only_mlp and only_attention"
     np.random.seed(random_seed)
     if prediction_dir is not None:
         if not os.path.exists(prediction_dir):
             os.makedirs(prediction_dir)
     task_offset = offset_map[task] if False else 0
-    X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train, task_offset=task_offset, random_seed=random_seed)
-    X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test, task_offset=task_offset, random_seed=random_seed)
+    X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train, task_offset=task_offset, random_seed=random_seed, only_mlp=only_mlp, only_attention=only_attention, only_layer=only_layer)
+    X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test, task_offset=task_offset, random_seed=random_seed, only_mlp=only_mlp, only_attention=only_attention, only_layer=only_layer)
     model = get_model(model_kind)
     train_pred, test_pred, test_accuracy = do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, verbose=True, prediction_dir=prediction_dir)
     return
