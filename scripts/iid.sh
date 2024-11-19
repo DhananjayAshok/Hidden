@@ -10,7 +10,8 @@ declare -A tasks_and_datasets=(
     ["sentiment_question"]=$sentstring
     ["sentiment_answer"]=$sentstring
     ["sentiment_sentiment"]=$sentstring
-    ["truthfullness"]=$truthstring
+    ["truthfullness_speaker"]=$truthstring
+    ["truthfullness_truth"]=$truthstring
 )
 
 model_name="meta-llama/Llama-3.1-8B-Instruct"
