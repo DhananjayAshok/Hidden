@@ -30,8 +30,8 @@ def main(run_name_base, task_datasets, model_save_name, random_sample_train_per,
     data = {}
     for task, dataset in task_datasets:
         print(f"Loading {task} {dataset}")
-        X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train_per, random_seed=random_seed)
-        X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test_per, random_seed=random_seed)
+        X_train, y_train, train_df = get_xydf(task, dataset, model_save_name, "train", random_sample_train_per, random_seed=random_seed, only_mlp=only_mlp, only_attention=only_attention, only_layer=only_layer)
+        X_test, y_test, test_df = get_xydf(task, dataset, model_save_name, "test", random_sample_test_per, random_seed=random_seed, only_mlp=only_mlp, only_attention=only_attention, only_layer=only_layer)
         internal_data = {"X_train": X_train, "y_train": y_train, "train_df": train_df, "X_test": X_test, "y_test": y_test, "test_df": test_df}
         data[(task, dataset)] = internal_data        
     
@@ -61,12 +61,12 @@ def main(run_name_base, task_datasets, model_save_name, random_sample_train_per,
         if not os.path.exists(prediction_dir):
             os.makedirs(prediction_dir)
         model = get_model(model_kind)
-        train_pred, test_pred, train_df, test_df, test_acc = fit_one_set(model, data, taskdata, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir, only_mlp, only_attention, only_layer)
+        train_pred, test_pred, train_df, test_df, test_acc = fit_one_set(model, data, taskdata, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir)
         print(f"Final Test Accuracy for [TASK]{task}[TASK] [DATASET]{dataset}[DATASET]: {test_acc}")
         del model
     return
     
-def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir, only_mlp, only_attention, only_layer):
+def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_iid_n, prediction_dir):
     train_datasets = []
     for taskdata in data:
         if taskdata == test_dataset:
@@ -95,7 +95,7 @@ def fit_one_set(model, data, test_dataset, strict_w_dataset, strict_w_task, mix_
     X_test = data[test_dataset]["X_test"]
     y_test = data[test_dataset]["y_test"]
     test_df = data[test_dataset]["test_df"]
-    train_pred, test_pred, test_acc = do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, verbose=False, prediction_dir=prediction_dir, only_mlp=only_mlp, only_attention=only_attention, only_layer=only_layer)
+    train_pred, test_pred, test_acc = do_model_fit(model, X_train, y_train, X_test, y_test, train_df, test_df, verbose=False, prediction_dir=prediction_dir)
     print(f"Test Base Rate for [TASK]{test_dataset[0]}[TASK] [DATASET]{test_dataset[1]}[DATASET]: {np.mean(y_test)}")
     return train_pred, test_pred, train_df, test_df, test_acc
     
