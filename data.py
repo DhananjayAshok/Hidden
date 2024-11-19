@@ -1409,7 +1409,7 @@ class Truthfullness:
         valid = pd.read_csv(f"{data_dir}/base/felm_test.csv")
         def proc_df(df):
             df['labels'] = df['labels'].apply(eval)
-            df["prompt"] = df["prompt"]
+            df["prompt"] = df["text"] + "\nAnswer: "
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["text"]
             df['label'] = df['labels'].apply(all).astype(int)
             return df[["idx", "text", "prompt", "label"]]
@@ -1496,7 +1496,7 @@ class Truthfullness:
         train = pd.read_csv(f"{data_dir}/base/truthfulqa_gen_train.csv")
         valid = pd.read_csv(f"{data_dir}/base/truthfulqa_gen_test.csv")
         def proc_df(df):
-            df["prompt"] = df["question"]
+            df["prompt"] = df["question"] + "\n Answer: "
             df["text"] = Truthfullness.prompt_task_dict[prompt_task] + df["question"] + " " + df["claim"]
             df['label'] = df['label'].astype(int)
             return df[["idx", "text", "prompt", "label"]]
