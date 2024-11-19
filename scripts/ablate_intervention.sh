@@ -5,8 +5,14 @@ declare -A tasks_and_datasets=(
     ["newstopic"]="agnews bbcnews nytimes"
 )
 
+intervention_strengths=(1 0.1 0.01 0.001 0.0001)
 model_kind="linear"
-intervention_strength=0.1
+intervention_strength_string=""
+for intervention_strength in "${intervention_strengths[@]}"
+do
+    intervention_strength_string="$intervention_strength_string --intervention_strength $intervention_strength-"
+done
+
 intervention_layer=15
 intervention_location="mlp"
 splits=("train" "test")
@@ -34,8 +40,8 @@ do
         do
             echo "XXXXXXXXXXXXXXXX $task $dataset $split XXXXXXXXXXXXXXXX"
             data_path="$DATA_DIR/$task/${dataset}_$split.csv"
-            output_csv_path="$RESULTS_DIR/$model_save_name/$task/${dataset}_${split}_intervention.csv"
-            python perform_intervention.py --model_name $model_name --data_path $data_path --output_csv_path $output_csv_path --intervention_vector_path $intervention_vector_path --intervention_layer $intervention_layer --intervention_strength $intervention_strength --intervention_location $intervention_location --max_new_tokens $max_new_tokens
+            output_csv_path="$RESULTS_DIR/$model_save_name/$task/${dataset}_${split}_intervention_ablation.csv"
+            python perform_intervention.py --model_name $model_name --data_path $data_path --output_csv_path $output_csv_path --intervention_vector_path $intervention_vector_path --intervention_layer $intervention_layer $intervention_strength_string --intervention_location $intervention_location --max_new_tokens $max_new_tokens
         done
     done
 done
