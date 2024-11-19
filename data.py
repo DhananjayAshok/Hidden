@@ -918,9 +918,9 @@ class Unanswerable:
             for i, row in df.iterrows():
                 unanswerable = "Answer the following question: \nQuestion:" + row[file]['u']
                 answerable = "Answer the following question: \nQuestion:" + row[file]['a']
-                data.append([id_it, group_it, file, answerable, row['file']['u'], False])
+                data.append([id_it, group_it, file, answerable, row[file]['u'], False])
                 id_it += 1
-                data.append([id_it, group_it, file, unanswerable, row['file']['a'], True])
+                data.append([id_it, group_it, file, unanswerable, row[file]['a'], True])
                 id_it += 1
                 group_it += 1
         df = pd.DataFrame(data, columns=columns)
