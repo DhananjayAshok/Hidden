@@ -52,18 +52,21 @@ def save_fig(figpath):
         plt.clf()
 
 
-def plot_metric(df, plot_col="advantage", save_suffix="iid"):
+def plot_metric(df, plot_col="advantage", save_suffix="iid", remove_variants=True):
     models = df["model"].unique()
     for model in models:
         model_df = df[df["model"] == model]
-        sns.boxplot(x="task", y=plot_col, data=model_df)
+        rel_df = model_df
+        if remove_variants:
+            rel_df = model_df[~model_df["task"].str.contains("_")] 
+        sns.boxplot(x="task", y=plot_col, data=rel_df)
         plt.title(f"Hidden Probe Performance on {model}")
         plt.xlabel("Task")
         plt.ylabel(plot_col[0].upper() + plot_col[1:])
         #plt.show()
         save_fig(figure_path + f"{model}/{save_suffix}_{plot_col}.png")
 
-        sns.scatterplot(x=f"fewshot_{plot_col}", y=plot_col, data=model_df, hue="task")
+        sns.scatterplot(x=f"fewshot_{plot_col}", y=plot_col, data=rel_df, hue="task")
         plt.title(f"Fewshot vs Hidden Probe Performance for {model}")
         plt.xlabel(f"Fewshot {plot_col[0].upper() + plot_col[1:]}")
         plt.ylabel(plot_col[0].upper() + plot_col[1:])
@@ -71,6 +74,8 @@ def plot_metric(df, plot_col="advantage", save_suffix="iid"):
         save_fig(figure_path + f"{model}/{save_suffix}_fewshot_{plot_col}.png")
 
         for task in model_df["task"].unique():
+            if remove_variants and "_" in task:
+                continue
             task_df = model_df[model_df["task"] == task]
             task_df = task_df.sort_values("advantage")
             sns.barplot(x="dataset", y=plot_col, data=task_df)
@@ -81,7 +86,8 @@ def plot_metric(df, plot_col="advantage", save_suffix="iid"):
             save_fig(figure_path + f"{model}/{save_suffix}_{task}_{plot_col}.png")
         
 
-def plot_iid_ood(iid_df, ood_df, plot_col):
+def plot_iid_ood(iid_df, ood_df, remove_variants=True):
+    plot_col = "accuracy"
     for i, row in iid_df.iterrows():
         task = row["task"]
         dataset = row["dataset"]
@@ -102,6 +108,8 @@ def plot_iid_ood(iid_df, ood_df, plot_col):
         plt.ylabel(f"{plot_col[0].upper() + plot_col[1:]} (IID-OOD)")
         save_fig(figure_path + f"{model}/iid_ood_{plot_col}.png")
         for task in model_df["task"].unique():
+            if "_" in task and remove_variants:
+                continue
             task_df = model_df[model_df["task"] == task]
             task_df = task_df.sort_values(f"{plot_col}_ood_penalty")
             sns.barplot(x="dataset", y=f"{plot_col}_ood_penalty", data=task_df)
@@ -109,6 +117,19 @@ def plot_iid_ood(iid_df, ood_df, plot_col):
             plt.xlabel("Dataset")
             plt.ylabel(f"{plot_col[0].upper() + plot_col[1:]} (IID-OOD)")
             save_fig(figure_path + f"{model}/iid_ood_{task}_{plot_col}.png")
+
+def plot_variant(iid_df, plot_col="advantage"):
+    for model in iid_df["model"].unique():
+        model_df = iid_df[iid_df["model"] == model]
+        for task in model_df["task"].unique():
+            task_df = model_df[model_df["task"].apply(lambda x: x.startswith(task))]
+            if len(task_df) == 0:
+                continue
+            sns.boxplot(x="task", y=plot_col, data=task_df)
+            plt.title(f"Hidden Probe Performance on {task} variants for {model}")
+            plt.xlabel("Variant")
+            plt.ylabel(plot_col[0].upper() + plot_col[1:])
+            save_fig(figure_path + f"{model}/variant_{task}_{plot_col}.png")
 
 if __name__ == "__main__":
     iid_df = pd.read_csv(reports_path + "/probe_iid.csv")
@@ -118,8 +139,9 @@ if __name__ == "__main__":
     augment_ood(ood_df, iid_df)
     augment_w_fewshot(iid_df, fewshot_agg)
     augment_w_fewshot(ood_df, fewshot_agg)
+    plot_iid_ood(iid_df, ood_df)
     for plot_col in ["accuracy", "advantage"]:
         plot_metric(iid_df, plot_col)
         plot_metric(ood_df, plot_col, "ood")
-        plot_iid_ood(iid_df, ood_df, plot_col)
+        plot_variant(iid_df, plot_col)
 

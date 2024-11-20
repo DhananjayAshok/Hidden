@@ -49,8 +49,8 @@ def main(model_name, data_path, intervention_vector_path, intervention_layer, in
         text_col = "prompt"
     else:
         text_col = "text"
-    for i in range(len(intervention_strength)):
-        data_df[f"output_{intervention_strength}"] = None
+    for strength in intervention_strength:
+        data_df[f"output_{strength}"] = None
     model = AutoModelForCausalLM.from_pretrained(model_name, config=config, device_map="auto")
     if stop_idx is not None:
         stop_idx = min(stop_idx, len(data_df))
